@@ -186,4 +186,171 @@ If we have >100 jobs/minute, or if multiple workers cause lock contention.
 
 ---
 
-### ADR-005: _[fill in next decision here]_
+### ADR-005: `camelCase: true` on the Drizzle adapter
+
+**Date:** 2026-05-17
+**Status:** Accepted (backfilled — decision made during Phase 1 implementation without prior ADR review)
+**Phase:** Phase 1
+
+**Context:**
+The `@better-auth/drizzle-adapter` has two modes for mapping between Better-Auth's internal camelCase field names (`emailVerified`, `createdAt`, `userId`) and the actual database columns. With `camelCase: false` (the default), it expects snake_case columns (`email_verified`, `created_at`). With `camelCase: true`, it maps camelCase → camelCase. We needed to pick one before writing the schema.
+
+**Options considered:**
+
+1. **`camelCase: false` (default) + snake_case schema** — Conventional for PostgreSQL. Column names like `email_verified`, `user_id`. The adapter auto-maps Better-Auth's internal names to them. More standard SQL.
+2. **`camelCase: true` + camelCase schema** — Column names stay `emailVerified`, `userId`. No translation layer. Less idiomatic in Postgres but consistent with TypeScript field names.
+
+**Decision:**
+`camelCase: true`.
+
+**Reasoning:**
+
+**Honest version:** The Drizzle schema was written first with camelCase column names (`boolean('emailVerified')`, `timestamp('createdAt')`) before the adapter mode was thought through. The adapter config was then set to match what was already written, not the other way around. It wasn't a principled upfront choice — it was a consequence of writing schema code before locking the convention.
+
+**Post-hoc justification that holds up:** Avoids a translation layer that could silently break if Better-Auth adds a new field and the snake_case mapping doesn't trigger correctly. What you write in the Drizzle schema is what you see in `psql`.
+
+**Trade-offs we accept:**
+
+- Every future table (`categories`, `expenses`, `receipts`, `ocr_jobs`) must also use camelCase column names — this is now a project-wide convention
+- Column names in `psql` look like `emailVerified` rather than `email_verified` — unusual for Postgres, can surprise anyone querying the DB directly
+- If we swap away from the Drizzle adapter, the new adapter needs to know columns are camelCase
+
+**Revisit trigger:**
+If a future Better-Auth or Drizzle adapter update assumes snake_case columns by default and breaks the mapping. Or if we add a second ORM/query tool that doesn't know the camelCase convention.
+
+---
+
+### ADR-006: `proxy.ts` with cookie-presence check for the session guard
+
+**Date:** 2026-05-17
+**Status:** Accepted (backfilled — decision made during Phase 1 implementation without prior ADR review)
+**Phase:** Phase 1
+
+**Context:**
+Need to protect `/dashboard` from unauthenticated access. Next.js provides a pre-render intercept layer (historically `middleware.ts`, renamed `proxy.ts` in v16). Two sub-decisions here: (1) which file to use, and (2) what the check inside it should do.
+
+**Options considered:**
+
+**For the file:**
+
+1. **`proxy.ts` (Next.js 16 convention)** — Node.js runtime, not configurable. The recommended path going forward.
+2. **`middleware.ts` (deprecated)** — Still works in Next.js 16, runs on Edge runtime. Would generate deprecation warnings.
+
+**For the check inside the proxy:**
+
+1. **Cookie presence only** — Check if `better-auth.session_token` cookie exists. Fast, no DB hit. Does not verify session is still valid in DB.
+2. **Full `auth.api.getSession()` call** — Hits the DB on every request to `/dashboard`. Catches revoked sessions at the proxy layer.
+
+**Decision:**
+`proxy.ts` with cookie-presence check, plus a real `auth.api.getSession()` check inside `dashboard/page.tsx`.
+
+**Reasoning:**
+
+**On `proxy.ts` vs `middleware.ts`:** The v16 docs state *"The edge runtime is NOT supported in proxy. The proxy runtime is nodejs, and it cannot be configured."* The choice of file was effectively made by reading the Next.js 16 upgrade guide — `proxy.ts` is the forward path. `middleware.ts` would have worked but generated deprecation noise and would need migration later anyway.
+
+**On cookie-presence vs DB check:** The proxy docs warn to *"not attempt relying on shared modules or globals"* and to *"always verify authentication and authorization inside each Server Function rather than relying on Proxy alone."* The trade-off was not explicitly reasoned about at the time — cookie-only was chosen as the simpler option, relying on the server component as the real gate. The Node.js runtime in `proxy.ts` would allow a DB call — that option was available but not evaluated.
+
+**What the cookie-only check actually does:**
+Prevents the most common case (no cookie at all → immediate redirect). Does NOT protect against a revoked/expired session that still has a cookie. That case is caught by the server component's `auth.api.getSession()` call, which hits the DB and redirects if the session is invalid. So there is a two-layer check, but the proxy layer is **not authoritative** — it's a fast redirect, not a security boundary.
+
+**Trade-offs we accept:**
+
+- A user with a revoked session (e.g., logged out on another device) passes through the proxy and is only stopped by the server component — one extra DB hit happens before the redirect
+- The proxy is not a security boundary, just a UX shortcut; the real auth is in the server component
+- Session cookie name (`better-auth.session_token`) is a Better-Auth internal detail; if they rename it, the proxy silently stops working while the server component still protects correctly
+
+**Revisit trigger:**
+If Better-Auth changes its cookie name. If we add routes that must be protected but do not have a server component to fall back on (e.g., a pure API route). If we need to block revoked sessions at the proxy layer for compliance reasons.
+
+---
+
+### ADR-007: Docker + Traefik instead of PM2 + Nginx + Certbot
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 1.5
+
+**Context:**
+Phases.md originally specified PM2 + Nginx + Certbot as the VPS stack. The user's VPS already has Traefik running as the reverse proxy (shared with n8n, Chatwoot, and other apps). Needed to decide whether to follow the original plan or match the existing VPS convention.
+
+**Options considered:**
+
+1. **PM2 + Nginx + Certbot** — what phases.md described. More moving parts per app. Each app manages its own Nginx config and cert renewal.
+2. **Docker Compose + Traefik** — user's existing convention. All apps containerised; Traefik (host mode) handles SSL centrally via Let's Encrypt. New app = one compose file + Traefik labels.
+
+**Decision:**
+Docker Compose + Traefik.
+
+**Reasoning:**
+The VPS already uses this pattern for other apps. Adding a second paradigm (PM2 + Nginx) would create inconsistency and maintenance overhead. The Traefik pattern is simpler to add to an existing setup (one compose file, no Nginx config files to manage).
+
+**Trade-offs we accept:**
+- Learning Docker if unfamiliar (mitigated by documentation)
+- Docker build RAM usage during deploy (~1.5 GB — requires swap on a 2 GB VPS)
+- If the Traefik container is misconfigured, all apps on the VPS lose HTTPS
+
+**Revisit trigger:**
+If we move off this VPS to a fresh host where Traefik is not already running.
+
+---
+
+### ADR-008: No shared Traefik Docker network
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 1.5
+
+**Context:**
+Traefik runs with `network_mode: host`, binding directly to the VPS network interfaces for ports 80/443. We needed to decide how our app container would be reachable by Traefik. Common patterns include a shared named Docker network (e.g. `traefik`) that Traefik also joins, or relying on Traefik's Docker provider to discover containers and route to their bridge IPs.
+
+**Options considered:**
+
+1. **Shared external network (e.g. `traefik`)** — Traefik joins the network and routes to the container's network-local IP. Common pattern when Traefik is NOT in host mode.
+2. **No shared network; host-mode Traefik routes to bridge IP** — Traefik in host mode can reach any container's bridge IP on the host directly. No `networks:` section needed in our compose file. Same pattern as n8n on this VPS.
+3. **Published port to host (`ports: ["3000:3000"]`) + Traefik routes to `localhost:3000`** — Works but exposes port 3000 on the host, bypassing Traefik.
+
+**Decision:**
+Option 2: no shared network, no published ports. Traefik (host mode) discovers our container via Docker socket labels and routes to bridge IP:3000.
+
+**Reasoning:**
+Confirmed to match the n8n pattern already in use on this VPS. Avoids exposing ports to the host. No external network declaration needed, keeping the compose file minimal.
+
+**Trade-offs we accept:**
+- Relies on Traefik's Docker provider being configured to watch all containers (not just those on a specific network) — confirmed working for n8n
+- If Traefik is ever moved off host mode, this setup needs a shared network added
+
+**Revisit trigger:**
+If Traefik is reconfigured to use a named network instead of host mode.
+
+---
+
+### ADR-009: Manual-only migrations (no auto-migrate on startup)
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 1.5
+
+**Context:**
+Needed to decide whether database migrations run automatically when the app container starts, or are run manually as a separate step.
+
+**Options considered:**
+
+1. **Auto-migrate on startup** — App runs `drizzle-kit migrate` before starting. Simple for developers; always consistent.
+2. **Manual migrate via separate Docker target** — `docker compose run --rm migrate` (or `make migrate`). Explicit, visible, safe.
+
+**Decision:**
+Manual only, via the `migrate` service in docker-compose (profile: tools) and `make migrate`.
+
+**Reasoning:**
+Auto-migration on startup creates risk: if a migration fails mid-deploy, the app may be in a broken state with no clear recovery path. It also makes rollback harder. For a small team making deliberate deploys, the explicit `make migrate` step costs almost nothing and makes the migration a conscious, logged action. The deployment runbook prominently documents when to run it.
+
+**Trade-offs we accept:**
+- Human must remember to run `make migrate` when schema changes. Mitigated by deployment.md instructions.
+- First-time setup requires an extra command after `docker compose up`
+
+**Revisit trigger:**
+Never reconsidering this. Manual migrations are the correct choice at any scale.
+
+---
+
+### ADR-010: _[fill in next decision here]_
