@@ -1,0 +1,27 @@
+# Dependencies — rebuilt inside container
+node_modules
+
+# Build output — rebuilt inside container
+.next
+
+# Secrets — never in image
+.env
+.env.local
+.env.*.local
+
+# Local data
+var/
+*.db
+
+# Version control
+.git
+.gitignore
+
+# Docs and scripts — not needed in container
+Docs/
+scripts/
+README.md
+
+# OS artefacts
+.DS_Store
+Thumbs.db

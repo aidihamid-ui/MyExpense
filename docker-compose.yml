@@ -1,0 +1,56 @@
+services:
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    environment:
+      DATABASE_URL:       ${DATABASE_URL}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL:    ${BETTER_AUTH_URL}
+      NODE_ENV:           production
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+    # No ports: — Traefik (host mode) reaches this container via its bridge IP on port 3000.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.myexpense.rule=Host(`myexpense.srv1488589.hstgr.cloud`)"
+      - "traefik.http.routers.myexpense.entrypoints=websecure"
+      - "traefik.http.routers.myexpense.tls.certresolver=letsencrypt"
+      - "traefik.http.services.myexpense.loadbalancer.server.port=3000"
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-myexpense}
+      POSTGRES_USER:     ${POSTGRES_USER:-myexpense}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    # No ports: — only the app container (same bridge network) connects to Postgres.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myexpense}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Run with: docker compose run --rm migrate
+  # Or:       make migrate
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - tools
+
+volumes:
+  db_data:
