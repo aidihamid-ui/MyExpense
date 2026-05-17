@@ -1,0 +1,237 @@
+# Phases
+
+Phase-by-phase build steps for MyExpense. Read only the section for the current phase.
+
+**Navigation:** Each phase starts with `## Phase N — Name`. Use that anchor.
+
+---
+
+## Phase 0 — Local Setup (~3-4 hours)
+
+**Deliverable:** Local dev environment where every part of the stack starts cleanly.
+
+### Steps
+- [ ] Install Node 20+ via `nvm` or `fnm`
+- [ ] Install PostgreSQL 16; create role `myexpense` and database `myexpense_dev`
+- [ ] Install Python 3.11+
+- [ ] Create GitHub repo `myexpense`, clone locally
+- [ ] Add `CLAUDE.md` at repo root + docs in `docs/` (build-plan, phases, conventions, etc.)
+- [ ] Init Next.js 15 with TypeScript + Tailwind: `npx create-next-app@latest .`
+- [ ] Install Drizzle, Better-Auth, Zod
+- [ ] Create `.nvmrc`, `.env.example`, `.env.local`, `.gitignore`
+- [ ] Set up `lib/env.ts` (typed env validation with Zod at boot)
+- [ ] Create `ocr-service/` directory with Python venv
+- [ ] Install: `pip install paddleocr paddlepaddle fastapi uvicorn` (slow — be patient)
+- [ ] Create minimal `ocr-service/main.py` with a `/health` endpoint returning "ok"
+- [ ] Verify: `npm run dev` works, Python service starts, `psql` connects
+- [ ] First commit: `chore: initial project scaffold`
+- [ ] Tag: `git tag -a v0.0-scaffold -m "Initial scaffold"`
+
+### Test
+All three processes start without error:
+- Next.js on `http://localhost:3000`
+- Python on `http://localhost:8001/health` returns ok
+- `psql myexpense_dev` connects
+
+### Commit + tag
+`v0.0-scaffold`
+
+---
+
+## Phase 1 — Auth (Days 2-3, local)
+
+**Deliverable:** Working signup/login/logout on `localhost:3000`. Two test accounts created.
+
+### Steps
+- Drizzle schema for `users` and `sessions`
+- Better-Auth configured (email/password; verification disabled for now)
+- Signup page, login page, logout button
+- Session middleware that protects `/dashboard`
+- Local password reset flow (token-based)
+
+### Test
+- Register two accounts (user-a@test.com, user-b@test.com)
+- Log in/out for each
+- Sessions persist across server restart
+- Trying to access `/dashboard` while logged out → redirect to login
+
+### Commit + tag
+`v0.1-auth-working`
+
+---
+
+## Phase 1.5 — First VPS Deploy (Day 4, ~half day)
+
+**Now you provision the VPS, while the app is still tiny.** Get the pipeline working before there's anything complicated to deploy.
+
+### VPS provisioning checklist
+- [ ] Buy Hostinger VPS (KVM 2 or higher, Ubuntu 22.04)
+- [ ] Buy domain, point A record to VPS IP (use subdomain `myexpense.{domain}`)
+- [ ] SSH in as root, create `deploy` user with sudo
+- [ ] Set up SSH key auth, disable password login
+- [ ] Install: Node 20, PostgreSQL 16, Python 3.11, Nginx, Certbot, PM2, ufw, fail2ban
+- [ ] Configure ufw: allow 22, 80, 443; block everything else
+- [ ] Get SSL cert via Certbot
+- [ ] Create Postgres DB + user on VPS
+- [ ] Create `/var/www/myexpense` (owned by deploy)
+- [ ] Create `/var/lib/myexpense/receipts` (owned by deploy, `chmod 700`)
+- [ ] Clone repo, `npm install`, `npm run build`, run migrations
+- [ ] Create `/var/www/myexpense/.env` with prod values (chmod 600)
+- [ ] PM2 ecosystem file (starts Next.js)
+- [ ] Nginx site: `myexpense.{domain}` → `localhost:3000`
+- [ ] Visit your domain over HTTPS, log in, log out
+
+### Create
+`docs/deployment.md` — the runbook for future deploys.
+
+### Future deploys (after this)
+```bash
+ssh deploy@myexpense.{domain}
+cd /var/www/myexpense
+git pull && npm install && npm run db:migrate && npm run build && pm2 reload all
+```
+
+### Commit + tag
+`v0.1.5-first-deploy`
+
+---
+
+## Phase 2 — Manual Expense Entry (Days 5-6, local)
+
+**Deliverable:** Add, edit, delete expenses; see them listed.
+
+### Steps
+- Schema: `categories`, `expenses`
+- Seed default categories on signup (Food, Transport, Groceries, Utilities, Entertainment, Healthcare, Other)
+- "Add expense" form with Zod validation (amount, category, date, note, payment method)
+- Expenses list with sort (date desc) + pagination
+- Edit / delete with confirmation modal
+- All queries via `lib/db/queries.ts` with `userId` filter
+
+### Test
+- Create 20 expenses across two accounts
+- Verify multi-tenancy: from account A's browser, try `GET /api/expenses/{B-expense-id}` — must fail
+- Edit and delete work; confirmation prevents accidents
+
+### Commit + tag
+`v0.2-expenses-done` — **deploy to VPS**.
+
+---
+
+## Phase 3 — Dashboard (Day 7, local)
+
+**Deliverable:** Useful overview on the homepage.
+
+### Steps
+- Current month total + last month for comparison
+- Category breakdown (table — chart in V2)
+- Last 30 days running total
+- Filter expenses by date range and category
+- Test edge cases: first/last day of month, timezone boundary
+
+### Test
+- Numbers add up exactly to the expense list totals
+- Date filters work across month boundary
+- Two accounts: each sees only their own numbers
+
+### Commit + tag
+`v0.3-dashboard-done` — **deploy**.
+
+---
+
+## Phase 4 — Receipt Upload, no OCR yet (Days 8-9, local)
+
+**Deliverable:** Upload receipt photo, see it attached to an expense.
+
+### Steps
+- File upload endpoint (Server Action) with validation:
+  - MIME type whitelist: `image/jpeg`, `image/png`, `image/webp`, `application/pdf`
+  - Magic bytes check (don't trust MIME header alone)
+  - Max 5MB
+- Save to `{STORAGE_PATH}/{userId}/{uuid}.{ext}`
+- Strip EXIF metadata (location leak risk)
+- Schema: `receipts` table
+- Form supports attaching photo to a new expense
+- View receipt via auth-checked route `/api/receipts/[id]`
+- The route: check session → fetch receipt row → verify `receipt.userId === session.userId` → stream file
+
+### Test
+- Upload 5 receipts of different sizes/formats
+- Try uploading `.exe` (must reject)
+- Try uploading 10MB file (must reject)
+- Direct file system path access without session → fails
+- User A can't access user B's receipt by guessing the ID
+
+### Commit + tag
+`v0.4-uploads-done` — **deploy**.
+
+---
+
+## Phase 5 — OCR Pipeline (Days 10-14, local)
+
+The meaty phase. Build in 5 sub-steps.
+
+### 5a. Python OCR service
+- FastAPI on `127.0.0.1:8001`
+- PaddleOCR loaded once at startup (~500MB, takes ~5s)
+- `POST /ocr` endpoint: accepts `{ "image_path": "..." }`, returns text + bounding boxes
+- Validate path is inside the receipts dir (prevent traversal)
+- Accept shared secret header `X-OCR-Secret` for defense-in-depth
+
+### 5b. `OcrProvider` interface
+- `lib/ocr/provider.ts` — interface with `extractFromImage(path: string): Promise<OcrResult>`
+- `lib/ocr/paddle.ts` — `PaddleOcrProvider` calls Python service
+- Selected at boot via `process.env.OCR_PROVIDER`
+
+### 5c. Job queue + worker
+- `ocr_jobs` table
+- `worker.ts` script polls every 5s for pending jobs
+- Handles retries (max 3) and permanent failures
+- PM2 runs as separate process in prod; locally `npm run worker` in separate terminal
+
+### 5d. Receipt parser
+- `lib/ocr/parser.ts` — turns raw OCR text into `{ total, date, merchant, items }`
+- Regex for `RM`/`Total`/`Jumlah` patterns
+- Conservative: leave fields empty rather than guess wrong
+- Return both structured data AND raw text (UI shows raw as fallback)
+
+### 5e. Review UI
+- After upload: "Processing your receipt..." status (poll every 3s, or use Server-Sent Events)
+- Once done: prefilled form + raw OCR text shown alongside
+- User edits any field, then confirms → creates expense
+
+### Test
+- Upload 10 different receipts: clean, crumpled, faded thermal paper, Malay-only, English-only, mixed
+- Document accuracy per category
+- Worker survives Python service restart (job retries)
+- Two users uploading simultaneously: jobs don't get crossed
+
+### Commit + tag
+`v0.5-ocr-working` — **deploy**. This deploy will reveal Python differences on Ubuntu — fix and document in `deployment.md`.
+
+---
+
+## Phase 6 — Polish & Production (Days 15-17)
+
+**Deliverable:** V1 worth inviting your 5 family/friends to.
+
+### Steps
+- CSV export
+- Search by note/merchant
+- Mobile responsive (test at 375px wide)
+- Settings page (change password, delete account)
+- Sentry for error tracking (free tier)
+- Backup cron jobs:
+  - Daily `pg_dump` to `/var/backups/myexpense/db-YYYY-MM-DD.sql.gz`, retain 30 days
+  - Daily rsync of receipts to second location
+- Uptime monitoring (Uptime Kuma free tier, or BetterStack)
+- Update `docs/deployment.md` with everything learned this build
+- README.md for public-facing intro
+
+### Test
+- Test backup restore on a fresh VM
+- Pull mobile UI test on actual phone over LAN
+- All security review prompts run one final time
+
+### Commit + tag
+`v1.0-production` — **invite your 5 users.**
