@@ -353,4 +353,66 @@ Never reconsidering this. Manual migrations are the correct choice at any scale.
 
 ---
 
-### ADR-010: _[fill in next decision here]_
+### ADR-010: Per-user categories (no shared global table)
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 2
+
+**Context:**
+Need a `categories` table to tag expenses. Two structural options: shared global categories visible to all users, or per-user categories owned exclusively by each user.
+
+**Options considered:**
+
+1. **Global categories table** — no `userId` column; all users see the same list. Simpler to seed (once), easier to add admin-managed categories later.
+2. **Per-user categories** — `userId` FK on every row; each user owns their own set, seeded at signup. Fully isolated, consistent with the multi-tenancy model already applied to expenses.
+3. **Hybrid** — global defaults plus a per-user override table. More complex, no clear benefit at 6-user scale.
+
+**Decision:**
+Option 2: per-user categories with `userId` on every row.
+
+**Reasoning:**
+Consistent with the project's multi-tenancy rule — every user-data table filters by `userId`. Avoids any future ambiguity about whether a category is shared or owned. Simple seed helper covers the "default set" requirement without needing a global table. User confirmed this design during the Phase 2 session conflict scan.
+
+**Trade-offs we accept:**
+- 7 category rows created per user at signup (trivial at 6-user scale)
+- No category sharing between users — each user manages their own list
+- If we ever want admin-managed shared categories, we'd need a migration to add a nullable `userId` or a separate global table
+
+**Revisit trigger:**
+If users request sharing categories across accounts, or if we add a multi-household feature.
+
+---
+
+### ADR-011: Signup side effects via Better-Auth `databaseHooks`
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 2
+
+**Context:**
+Need to seed default categories when a new user signs up. Needed a hook point that fires reliably after the user row is committed, without patching the signup route.
+
+**Options considered:**
+
+1. **`databaseHooks.user.create.after` in `lib/auth/index.ts`** — Better-Auth's built-in mechanism. Fires after the user row is written. Config-level, no route changes needed.
+2. **Custom signup server action** — wrap Better-Auth's `signUp.email()` in our own server action, call `seedDefaultCategories` after. Requires replacing the client-side auth call with our own action everywhere.
+3. **Post-login check** — seed on first login if categories are empty. Lazy, harder to reason about, creates a race condition window.
+
+**Decision:**
+Option 1: `databaseHooks.user.create.after` in `lib/auth/index.ts`.
+
+**Reasoning:**
+Least invasive. Better-Auth owns the signup flow; hooking at the DB layer means we don't need to intercept the HTTP route or change client-side code. The hook fires after the user row is committed, so `user.id` is stable. Wrapped in `try/catch` so a seed failure never blocks account creation.
+
+**Trade-offs we accept:**
+- All future signup side effects must also go in `lib/auth/index.ts` — it becomes the canonical place for post-signup logic
+- If Better-Auth changes the `databaseHooks` API, this breaks silently at runtime (not caught by typecheck)
+- A seed failure is swallowed (logged only) — there is currently no retry or alerting mechanism
+
+**Revisit trigger:**
+If we add signup side effects that must not fail silently (e.g., sending a welcome email), we should add proper error handling or move to Option 2.
+
+---
+
+### ADR-012: _[fill in next decision here]_
