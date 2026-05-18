@@ -415,4 +415,58 @@ If we add signup side effects that must not fail silently (e.g., sending a welco
 
 ---
 
-### ADR-012: _[fill in next decision here]_
+### ADR-012: Server actions in `lib/actions/` (not inline in pages)
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 2
+
+**Context:**
+Need a convention for where server actions live. Next.js allows them inline in server components (via `'use server'` inside the function body) or in separate files. Choosing inline vs. extracted now sets the pattern for all future features.
+
+**Options considered:**
+
+1. **Inline in page/component** — server action defined directly inside the server component that uses it. No extra file. Works for simple cases.
+2. **`lib/actions/<feature>.ts`** — server actions in a separate file with `'use server'` at the top. Importable by client components via `useActionState`. Testable in isolation.
+
+**Decision:**
+Option 2: `lib/actions/<feature>.ts`.
+
+**Reasoning:**
+Client form components (`expense-form.tsx`) must import the action directly since they use `useActionState`. An inline server action is only callable from the same file; it cannot be imported by a client component. Since the form is a separate client component (required for `useActionState`), the action must live in an importable module. `lib/actions/` is consistent with the `lib/` convention already used for `lib/db/`, `lib/validators/`, etc.
+
+**Trade-offs we accept:**
+- One extra file per feature area (small cost)
+- All future server actions must follow this convention — they go in `lib/actions/`, not inline
+
+**Revisit trigger:**
+If a server action is trivially simple and only called from a single server component (no client usage needed), inline is acceptable as a one-off exception.
+
+---
+
+### ADR-013: Nav as a standalone client component (no route-group layout)
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 2
+
+**Context:**
+Need a shared navigation bar across all authenticated pages (`/dashboard`, `/expenses`, future pages). Two structural options: a shared layout file via a route group, or a standalone component imported per page.
+
+**Options considered:**
+
+1. **Route group `app/(app)/layout.tsx`** — move all authenticated pages under `app/(app)/`. The layout renders Nav once for all child routes. Clean, DRY. Requires moving `app/dashboard/` to `app/(app)/dashboard/` (file rename/move).
+2. **`components/nav.tsx` imported per page** — Nav is a client component imported directly into each page. No file moves needed. Small duplication (one import per page).
+
+**Decision:**
+Option 2: standalone `components/nav.tsx` imported per page.
+
+**Reasoning:**
+The route group approach requires moving `app/dashboard/` to `app/(app)/dashboard/`, which is a rename/move with no functional benefit at this stage. The per-page import is two lines per page (import + `<Nav />`). At 2–4 protected pages, this is not meaningful duplication. The route group is the right long-term solution if we add 8+ protected pages.
+
+**Trade-offs we accept:**
+- Must remember to add `<Nav />` to every new protected page
+- If Nav ever holds server-fetched data (e.g., unread notification count), per-page import forces each page to fetch it separately — a route group layout would fetch it once
+
+**Revisit trigger:**
+If we add more than 5 protected pages, or if Nav needs server-fetched state, migrate to the route group layout.
