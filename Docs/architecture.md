@@ -594,3 +594,51 @@ shadcn/ui.
 
 **Revisit trigger:**
 Never for the core decision. If a specific component is missing from shadcn/ui, add it one-off without changing the overall library choice.
+
+---
+
+### ADR-018: Radix Select (shadcn) with `name` prop for FormData-based server actions
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Between Phase 2 and Phase 3 (established during shadcn/ui restyle)
+
+**Context:**
+The expense forms use `useActionState` with Next.js server actions. Server actions receive a native `FormData` object. Migrating `<select>` elements to shadcn's `Select` component (which uses Radix UI's `SelectPrimitive.Root`) raises the question of whether the component will correctly submit a value via `FormData`.
+
+**Options considered:**
+
+1. **Keep native `<select>` elements, styled with Tailwind** — native selects work with FormData natively, no surprises. Downside: inconsistent with the rest of the shadcn component set; harder to style accessibly.
+2. **Radix `Select` with `name` prop** — Radix `SelectPrimitive.Root` accepts a `name` prop and renders a hidden `<input type="hidden" name="..." value="...">` behind the scenes. This hidden input participates in native form submission and thus in `FormData`. Consistent with other shadcn components; accessible (keyboard nav, ARIA).
+3. **Controlled Select + hidden input manually** — Wire up `useState` + `onValueChange` and render our own hidden input. Needlessly complex; duplicates what Radix already does.
+
+**Decision:**
+Option 2: Use Radix `Select` with `name` prop in all forms that use server actions.
+
+**Reasoning:**
+Radix UI explicitly documents that when `name` is provided, a hidden native input is rendered for form submission. This means `FormData.get('fieldName')` returns the selected value identically to a native `<select>`. The approach requires no changes to server actions or validators. Consistency with the full shadcn component set is more important than avoiding the Radix abstraction.
+
+**How it works in practice:**
+```tsx
+<Select name="paymentMethod" defaultValue="cash">
+  <SelectTrigger className="h-11 w-full">
+    <SelectValue />
+  </SelectTrigger>
+  <SelectContent>
+    <SelectItem value="cash">Cash</SelectItem>
+    ...
+  </SelectContent>
+</Select>
+```
+The hidden `<input name="paymentMethod" value="cash">` is rendered automatically. `FormData.get('paymentMethod')` returns `"cash"`.
+
+**Empty-string value for optional selects:**
+For optional category selects, `<SelectItem value="">— None —</SelectItem>` with `defaultValue=""` is used. Radix treats empty string as a valid value and submits it correctly. The server action receives `categoryId: ""` which the validator accepts as "no category".
+
+**Trade-offs we accept:**
+- All future form selects must use Radix `Select` with `name` prop — native `<select>` is no longer the convention
+- `SelectTrigger` defaults to `w-fit`; must always add `className="h-11 w-full"` to make it full-width with correct tap target height
+- If Radix changes its hidden-input behaviour in a future version, all selects break simultaneously — mitigated by pinning package versions
+
+**Revisit trigger:**
+If Radix changes the hidden-input mechanism, or if a future form requires a multi-select (Radix Select is single-value only — would need a different component).

@@ -115,7 +115,7 @@ Full runbook: `Docs/deployment.md`.
 - [x] `npm run typecheck` clean, `npm run lint` clean, `npm run build` passes
 
 ### Commit + tag
-`v0.2-expenses-done` — **deploy to VPS pending**.
+`v0.2-expenses-done` — **deployed to VPS ✓** (commit 99e63b9).
 
 ---
 

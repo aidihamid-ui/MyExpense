@@ -72,9 +72,13 @@ export async function getExpenses() {
 
 ## Styling
 
-- **Tailwind only.** No `.css` or `.scss` files.
+- **Tailwind + shadcn/ui.** No hand-written `.css` or `.scss` files.
 - No inline `style` attributes unless dynamically computed (e.g., chart positioning).
-- Compose with `clsx` or `cn()` helper for conditional classes.
+- Use `cn()` from `@/lib/utils` for conditional class merging (wraps `clsx` + `tailwind-merge`).
+- **shadcn/ui components** live in `components/ui/`. Do not edit these files directly — they are managed by `npx shadcn@latest add <component>`. Custom components go in `components/` (not `components/ui/`).
+- **Tap targets:** All interactive elements (buttons, inputs, select triggers) must be at minimum `h-11` (44px). Apply via `className="h-11"` to override shadcn defaults where needed.
+- **Page backgrounds:** `bg-slate-50`. Card/panel backgrounds: use the shadcn `Card` component (renders `bg-card`/white with `ring-1 ring-foreground/10`).
+- **Primary color is blue** — set via CSS variables in `app/globals.css`. Do not hardcode blue classes (`text-blue-600`) in components; use `text-primary`, `bg-primary`, etc.
 
 ---
 
