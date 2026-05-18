@@ -559,3 +559,38 @@ Next.js 16 docs explicitly prescribe this. No legacy format justification. TypeS
 
 **Revisit trigger:**
 If `eslint-config-next` version diverges from the installed Next.js version and causes false positives.
+
+---
+
+### ADR-017: shadcn/ui as the UI component library
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Between Phase 2 and Phase 3 (approved before Phase 3 work begins)
+
+**Context:**
+Phase 3 (Dashboard) requires richer UI components — cards, data tables, select menus, date pickers. The current setup (Tailwind 4 only, hand-rolled components) works for simple forms but will become tedious for a full dashboard. Need to pick a component library before Phase 3 starts so the convention is locked in from the start.
+
+**Options considered:**
+
+1. **DaisyUI** — Tailwind plugin, zero JS, very fast to set up, good for simple pages. Weaker long-term: less accessible, less composable, harder to customise deeply. Theme system fights Tailwind 4's new CSS variable approach.
+2. **Tremor** — Purpose-built for dashboards and charts. Strong data viz. But a charts/stats library, not a full general-purpose component library — would still need another library for forms, modals, comboboxes, etc.
+3. **shadcn/ui** — Not a library; copies component source into the repo. Built on Radix UI primitives (WAI-ARIA accessible) and Tailwind 4. Code ownership: components live in `components/ui/`, fully editable. Claude Code has strong familiarity with shadcn/ui patterns.
+
+**Decision:**
+shadcn/ui.
+
+**Reasoning:**
+- Code ownership: components are copied into `components/ui/` — no version conflicts, no black-box behaviour
+- Radix UI primitives handle accessibility (focus traps, keyboard nav, ARIA) correctly without extra work
+- Full general-purpose library: buttons, dialogs, selects, date pickers, tables, toasts — covers everything from Phase 3 onward
+- Tailwind 4 compatible
+- Claude Code familiarity reduces implementation friction
+
+**Trade-offs we accept:**
+- Slightly more setup than DaisyUI (run `npx shadcn@latest add <component>` per component needed)
+- Components live in `components/ui/` — that directory is shadcn-managed; do not put custom components there
+- Upgrading individual components means re-running the add command and reviewing the diff
+
+**Revisit trigger:**
+Never for the core decision. If a specific component is missing from shadcn/ui, add it one-off without changing the overall library choice.

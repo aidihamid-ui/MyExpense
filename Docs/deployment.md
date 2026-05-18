@@ -253,6 +253,11 @@ gunzip -c /var/backups/myexpense/db-<timestamp>.sql.gz \
 → `db_data` Docker volume persists data. If volume was manually deleted, data is gone.
 → Restore from backup (see above).
 
+**Build fails with Zod validation errors on env vars (e.g. "Invalid url", "String must contain at least 32 character(s)")**
+→ The Dockerfile builder stage sets placeholder values for env vars so that `lib/env.ts` can be imported during `next build`.
+→ These placeholders must be valid-shaped, not literal words like `placeholder`. A URL placeholder must be a real URL format; a secret placeholder must be ≥ 32 characters.
+→ After any phase that adds new env vars to `lib/env.ts`, update the corresponding `ARG`/`ENV` lines in the Dockerfile builder stage to use correctly-shaped placeholders, or the build will fail.
+
 ---
 
 ## Rollback

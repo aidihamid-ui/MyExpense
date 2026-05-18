@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-18
 **Last session by:** Claude
-**Current phase:** Phase 2 — COMPLETE. Next: Phase 3 — Dashboard.
+**Current phase:** Between Phase 2 and Phase 3. shadcn/ui install in progress; Phase 3 Dashboard next.
 
 ---
 
@@ -52,9 +52,9 @@ _Security (verified):_
 
 ### What's broken or incomplete
 
-- VPS not yet updated to Phase 2: run `make deploy` then `make migrate` (migration 0001)
 - PaddleOCR not installed (deferred to Phase 5; needs Python 3.11)
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
+- shadcn/ui install in progress (pre-Phase 3 UI setup)
 
 ### Last known-good git state
 
@@ -64,7 +64,16 @@ _Security (verified):_
 
 ---
 
-## What Was Done — Phase 2 Session 3 (this session — final)
+## What Was Done — UI pre-work (between Phase 2 and Phase 3)
+
+- Phase 2 deployed to VPS (commit 99e63b9): Dockerfile build-time ENV placeholders updated to pass Zod validation; `make deploy` + `make migrate` run on VPS — Phase 2 now live at https://myexpense.srv1488589.hstgr.cloud ✓
+- ADR-017 recorded: shadcn/ui chosen as UI component library (see `Docs/architecture.md`)
+- `Docs/deployment.md` Troubleshooting: added warning about Dockerfile ENV placeholder shape requirements
+- shadcn/ui install in progress (Phase 3 pre-work)
+
+---
+
+## What Was Done — Phase 2 Session 3 (final)
 
 - `app/expenses/[id]/edit/page.tsx` — edit page: fetches expense by `(userId, id)`, `notFound()` if missing/wrong-owner, renders pre-filled form
 - `app/expenses/[id]/edit/edit-expense-form.tsx` — pre-filled client form, `updateExpenseAction`, hidden `expenseId` field, full Zod validation
@@ -99,7 +108,7 @@ From `Docs/phases.md`:
 - Last 30 days running total
 - Filter expenses by date range and category
 
-**Pre-work:** Deploy Phase 2 to VPS first (`make deploy` + `make migrate`).
+**Pre-work:** Complete shadcn/ui install (in progress). VPS already on Phase 2 ✓.
 
 **On completion:** tag `v0.3-dashboard-done` → deploy.
 
@@ -107,7 +116,7 @@ From `Docs/phases.md`:
 
 ## Open Questions / Blockers
 
-- [ ] Deploy Phase 2 to VPS: `make deploy` + `make migrate` (migration 0001)
+- [ ] Complete shadcn/ui install (pre-Phase 3)
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] PaddleOCR on Python 3.14: unknown. Needs Python 3.11 for Phase 5 (`py -3.11`)
-- [ ] ADR-013 revisit: 3 protected pages now (dashboard, expenses, expenses/new, expenses/[id]/edit) — approaching the "5 pages" revisit trigger for route group layout
+- [ ] ADR-013 revisit: 4 protected pages now (dashboard, expenses, expenses/new, expenses/[id]/edit) — approaching the "5 pages" revisit trigger for route group layout
