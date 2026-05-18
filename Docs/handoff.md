@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-18
 **Last session by:** Claude
-**Current phase:** Phase 1.5 — VPS Deploy (files done, VPS deploy PENDING)
+**Current phase:** Phase 2 — Manual Expense Entry
 
 ---
 
@@ -20,65 +20,66 @@
 - Dashboard server component: double-checks session with `auth.api.getSession()`, redirects if null
 - Two test accounts in DB: `user-a@test.com` / `user-b@test.com` (password: `password123`)
 - `npm run typecheck` — clean
-- `npm run build` — passes (confirm locally after `output: standalone` was added)
-- GitHub remote: `https://github.com/aidihamid-ui/MyExpense.git` — pushed ✓
-- All Phase 1.5 Docker files committed and pushed (`b414f4c`)
+- `npm run build` — passes
+- **VPS deploy live at https://myexpense.srv1488589.hstgr.cloud** ✓
+- GitHub: `https://github.com/aidihamid-ui/MyExpense.git` — up to date
+- Tagged `v0.1.5-first-deploy`
 
 **For startup commands and the full local env runbook, see `Docs/environment.md`.**
-**For VPS deploy steps, see `Docs/deployment.md`.**
+**For VPS deploy and future deploys, see `Docs/deployment.md`.**
 
 ### What's broken or incomplete
 
-- **VPS deploy not yet executed** — all files are ready, nothing has been run on the server yet
 - PaddleOCR not installed (deferred to Phase 5; needs Python 3.11)
 - No lint config yet (ESLint not set up — non-blocking)
+- Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
 
 ### Last known-good git state
 
 - Branch: master
-- Last commit: `b414f4c` — `[Phase 1.5] feat: Docker + Traefik deploy setup`
-- Last tag: `v0.1-auth-working` (Phase 1.5 tag `v0.1.5-first-deploy` pending VPS verification)
+- Last commit: `5114b7a` — `[Phase 1.5] docs: add make to VPS pre-flight steps`
+- Last tag: `v0.1.5-first-deploy`
 
 ---
 
-## What Was Done This Session
+## What Was Done — Phase 1.5
 
-- Added `output: "standalone"` to `next.config.ts` (required for Docker)
-- Created `Dockerfile` — multi-stage: deps → builder → runner (standalone, non-root) + migrator target
+- Added `output: "standalone"` to `next.config.ts`
+- Created `Dockerfile` (multi-stage: deps → builder → runner + migrator target, non-root user)
 - Created `.dockerignore`
 - Created `docker-compose.yml` — app + postgres:17-alpine, Traefik labels, no shared network, no published ports
-- Created `Makefile` — deploy, migrate, logs, backup, shell, ps targets
-- Created `scripts/backup-db.sh` — pg_dump via compose exec, gzip, 30-day retention
-- Created `Docs/deployment.md` — full pre-flight + deploy runbook
-- Created `scripts/ds-watch.js` — DeepSeek SSE watcher for live task visibility
-- Committed and pushed all Phase 1.5 files to GitHub
-- Added ADRs 007–009 to `Docs/architecture.md`
+- Created `Makefile` — deploy, migrate, logs, backup, shell, ps
+- Created `scripts/backup-db.sh` — pg_dump, gzip, 30-day retention
+- Created `Docs/deployment.md` — pre-flight + full runbook
+- **VPS deploy executed and verified live**
+- **Fix applied:** Added build-time ENV placeholders to Dockerfile builder stage (`DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL=placeholder`) — Next.js standalone build requires these at build time; overridden at runtime
+- **Pre-flight updated:** added `apt-get install -y make` step to `Docs/deployment.md`
+- ADRs 007–009 added to `Docs/architecture.md`
+- Tagged `v0.1.5-first-deploy` and pushed
 
 ---
 
-## Next Up (in priority order)
+## Next Up — Phase 2: Manual Expense Entry
 
-1. **Execute Phase 1.5 VPS deploy** — follow `Docs/deployment.md`:
-   - Pre-flight: add swap, verify DNS, generate `BETTER_AUTH_SECRET` locally
-   - SSH to VPS, clone repo, create `.env`, `docker compose up --build -d`
-   - `make migrate`
-   - Verify https://myexpense.srv1488589.hstgr.cloud
-   - Tag `v0.1.5-first-deploy` and push
-2. **Phase 2 — Manual Expense Entry.** Schema: `categories`, `expenses`. Add/edit/delete form.
+From `Docs/phases.md`:
+
+- Schema: `categories` table + `expenses` table
+- Seed default categories on signup (Food, Transport, Groceries, Utilities, Entertainment, Healthcare, Other)
+- "Add expense" form with Zod validation (amount, category, date, note, payment method)
+- Expenses list with sort (date desc) + pagination
+- Edit / delete with confirmation modal
+- All queries via `lib/db/queries.ts` with `userId` filter
+
+**Test gate (from phases.md):**
+- Create 20 expenses across two accounts
+- Verify multi-tenancy: from account A's browser, try `GET /api/expenses/{B-expense-id}` — must fail
+- Edit and delete work; confirmation prevents accidents
+
+**Tag on completion:** `v0.2-expenses-done` → deploy to VPS.
 
 ---
 
 ## Open Questions / Blockers
 
-- [ ] VPS deploy not started — user needs to SSH in and follow `Docs/deployment.md`
-- [ ] After deploy: set up cron for `scripts/backup-db.sh` (line in deployment.md)
+- [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] PaddleOCR on Python 3.14: unknown. Needs Python 3.11 for Phase 5 (`py -3.11`)
-
----
-
-## Decisions Made This Session
-
-See ADRs 007–009 in `Docs/architecture.md`:
-- **ADR-007:** Docker + Traefik instead of PM2 + Nginx (matches existing VPS convention)
-- **ADR-008:** No shared Traefik network — host-mode Traefik routes to bridge IP directly (same as n8n on this VPS)
-- **ADR-009:** Manual-only migrations — `make migrate` is an explicit step, never auto on startup
