@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Separator } from '@/components/ui/separator';
 
 const links = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -12,18 +13,21 @@ export default function Nav() {
   const pathname = usePathname();
 
   return (
-    <nav className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
-        <span className="text-sm font-semibold text-gray-900">MyExpense</span>
-        <div className="flex gap-4">
+    <nav className="border-b bg-white shadow-sm">
+      <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2">
+        <span className="text-base font-bold text-primary tracking-tight">
+          MyExpense
+        </span>
+        <Separator orientation="vertical" className="h-5" />
+        <div className="flex gap-1">
           {links.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              className={`text-sm font-medium ${
+              className={`flex min-h-[44px] items-center rounded-lg px-3 text-sm font-medium transition-colors ${
                 pathname.startsWith(href)
-                  ? 'text-gray-900'
-                  : 'text-gray-500 hover:text-gray-700'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               {label}

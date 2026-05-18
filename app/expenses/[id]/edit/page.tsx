@@ -23,10 +23,10 @@ export default async function EditExpensePage({
   if (!expense) notFound();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Nav />
       <main className="mx-auto max-w-lg px-4 py-8">
-        <h1 className="mb-6 text-2xl font-semibold text-gray-900">Edit Expense</h1>
+        <h1 className="mb-6 text-2xl font-semibold">Edit Expense</h1>
         <EditExpenseForm expense={expense} categories={categories} />
       </main>
     </div>

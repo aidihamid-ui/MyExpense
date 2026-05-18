@@ -3,6 +3,16 @@
 import { useActionState } from 'react';
 import Link from 'next/link';
 import { updateExpenseAction, type CreateExpenseState } from '@/lib/actions/expenses';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type Category = { id: string; name: string };
 
@@ -35,9 +45,9 @@ export default function EditExpenseForm({
   );
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6">
+    <div className="rounded-xl border bg-white p-6 shadow-sm">
       {state?.message && (
-        <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="mb-4 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {state.message}
         </div>
       )}
@@ -47,10 +57,10 @@ export default function EditExpenseForm({
 
         {/* Amount */}
         <div>
-          <label htmlFor="amount" className="mb-1 block text-sm font-medium text-gray-700">
-            Amount (RM) <span className="text-red-500">*</span>
+          <label htmlFor="amount" className="mb-1.5 block text-sm font-medium">
+            Amount (RM) <span className="text-destructive">*</span>
           </label>
-          <input
+          <Input
             id="amount"
             name="amount"
             type="number"
@@ -58,112 +68,105 @@ export default function EditExpenseForm({
             min="0.01"
             defaultValue={expense.amount}
             required
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className="h-11"
           />
           {state?.errors?.amount && (
-            <p className="mt-1 text-xs text-red-500">{state.errors.amount[0]}</p>
+            <p className="mt-1 text-xs text-destructive">{state.errors.amount[0]}</p>
           )}
         </div>
 
         {/* Category */}
         <div>
-          <label htmlFor="categoryId" className="mb-1 block text-sm font-medium text-gray-700">
+          <label htmlFor="categoryId" className="mb-1.5 block text-sm font-medium">
             Category
           </label>
-          <select
-            id="categoryId"
-            name="categoryId"
-            defaultValue={expense.categoryId ?? ''}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-          >
-            <option value="">— None —</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+          <Select name="categoryId" defaultValue={expense.categoryId ?? ''}>
+            <SelectTrigger id="categoryId" className="h-11 w-full">
+              <SelectValue placeholder="— None —" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">— None —</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {state?.errors?.categoryId && (
-            <p className="mt-1 text-xs text-red-500">{state.errors.categoryId[0]}</p>
+            <p className="mt-1 text-xs text-destructive">{state.errors.categoryId[0]}</p>
           )}
         </div>
 
         {/* Date */}
         <div>
-          <label htmlFor="date" className="mb-1 block text-sm font-medium text-gray-700">
-            Date <span className="text-red-500">*</span>
+          <label htmlFor="date" className="mb-1.5 block text-sm font-medium">
+            Date <span className="text-destructive">*</span>
           </label>
-          <input
+          <Input
             id="date"
             name="date"
             type="date"
             defaultValue={expense.date}
             required
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className="h-11"
           />
           {state?.errors?.date && (
-            <p className="mt-1 text-xs text-red-500">{state.errors.date[0]}</p>
+            <p className="mt-1 text-xs text-destructive">{state.errors.date[0]}</p>
           )}
         </div>
 
         {/* Payment Method */}
         <div>
-          <label
-            htmlFor="paymentMethod"
-            className="mb-1 block text-sm font-medium text-gray-700"
-          >
-            Payment Method <span className="text-red-500">*</span>
+          <label htmlFor="paymentMethod" className="mb-1.5 block text-sm font-medium">
+            Payment Method <span className="text-destructive">*</span>
           </label>
-          <select
-            id="paymentMethod"
-            name="paymentMethod"
-            defaultValue={expense.paymentMethod}
-            required
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
-          >
-            {PAYMENT_METHODS.map(({ value, label }) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+          <Select name="paymentMethod" defaultValue={expense.paymentMethod} required>
+            <SelectTrigger id="paymentMethod" className="h-11 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAYMENT_METHODS.map(({ value, label }) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {state?.errors?.paymentMethod && (
-            <p className="mt-1 text-xs text-red-500">{state.errors.paymentMethod[0]}</p>
+            <p className="mt-1 text-xs text-destructive">{state.errors.paymentMethod[0]}</p>
           )}
         </div>
 
         {/* Note */}
         <div>
-          <label htmlFor="note" className="mb-1 block text-sm font-medium text-gray-700">
+          <label htmlFor="note" className="mb-1.5 block text-sm font-medium">
             Note
           </label>
-          <textarea
+          <Textarea
             id="note"
             name="note"
             rows={3}
             maxLength={500}
             defaultValue={expense.note ?? ''}
-            className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+            className="resize-none"
           />
           {state?.errors?.note && (
-            <p className="mt-1 text-xs text-red-500">{state.errors.note[0]}</p>
+            <p className="mt-1 text-xs text-destructive">{state.errors.note[0]}</p>
           )}
         </div>
 
-        <div className="flex gap-3">
-          <button
+        <div className="flex gap-3 pt-1">
+          <Button
             type="submit"
             disabled={pending}
-            className="flex-1 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700 disabled:opacity-50"
+            className="h-11 flex-1"
           >
             {pending ? 'Saving...' : 'Save changes'}
-          </button>
-          <Link
-            href="/expenses"
-            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </Link>
+          </Button>
+          <Button variant="outline" asChild className="h-11">
+            <Link href="/expenses">Cancel</Link>
+          </Button>
         </div>
       </form>
     </div>

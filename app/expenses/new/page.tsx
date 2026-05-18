@@ -14,10 +14,10 @@ export default async function NewExpensePage() {
   const categories = await getCategories(session.user.id);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Nav />
       <main className="mx-auto max-w-lg px-4 py-8">
-        <h1 className="mb-6 text-2xl font-semibold text-gray-900">Add Expense</h1>
+        <h1 className="mb-6 text-2xl font-semibold">Add Expense</h1>
         <ExpenseForm categories={categories} />
       </main>
     </div>

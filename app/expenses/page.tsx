@@ -5,6 +5,17 @@ import Link from 'next/link';
 import { getExpenses } from '@/lib/db/queries';
 import Nav from '@/components/nav';
 import DeleteExpenseButton from '@/components/delete-expense-button';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Cash',
@@ -34,112 +45,108 @@ export default async function ExpensesPage({
   const expenses = rows.slice(0, PAGE_SIZE);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Nav />
       <main className="mx-auto max-w-5xl px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">Expenses</h1>
-          <Link
-            href="/expenses/new"
-            className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-700"
-          >
-            Add expense
-          </Link>
+          <h1 className="text-2xl font-semibold">Expenses</h1>
+          <Button asChild className="h-11 px-5">
+            <Link href="/expenses/new">Add expense</Link>
+          </Button>
         </div>
 
         {expenses.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
-            <p className="mb-4 text-gray-500">No expenses yet.</p>
-            <Link
-              href="/expenses/new"
-              className="text-sm font-medium text-gray-900 underline"
-            >
-              Add your first expense
-            </Link>
-          </div>
+          <Card className="shadow-sm">
+            <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
+              <p className="text-muted-foreground">No expenses yet.</p>
+              <Button asChild variant="outline" className="h-11">
+                <Link href="/expenses/new">Add your first expense</Link>
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <>
             {/* Desktop table */}
-            <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white sm:block">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50 text-left">
-                    <th className="px-4 py-3 font-medium text-gray-500">Date</th>
-                    <th className="px-4 py-3 font-medium text-gray-500">Category</th>
-                    <th className="px-4 py-3 text-right font-medium text-gray-500">Amount (RM)</th>
-                    <th className="px-4 py-3 font-medium text-gray-500">Payment</th>
-                    <th className="px-4 py-3 font-medium text-gray-500">Note</th>
-                    <th className="px-4 py-3 font-medium text-gray-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+            <Card className="hidden shadow-sm sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="px-4">Date</TableHead>
+                    <TableHead className="px-4">Category</TableHead>
+                    <TableHead className="px-4 text-right">Amount (RM)</TableHead>
+                    <TableHead className="px-4">Payment</TableHead>
+                    <TableHead className="px-4">Note</TableHead>
+                    <TableHead className="px-4">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {expenses.map((expense) => (
-                    <tr
-                      key={expense.id}
-                      className="border-b border-gray-50 last:border-0"
-                    >
-                      <td className="px-4 py-3 text-gray-700">{expense.date}</td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {expense.categoryName ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right font-medium text-gray-900">
+                    <TableRow key={expense.id}>
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {expense.date}
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        {expense.categoryName ? (
+                          <Badge variant="secondary">{expense.categoryName}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-right font-semibold">
                         {Number(expense.amount).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {PAYMENT_LABELS[expense.paymentMethod] ?? expense.paymentMethod}
-                      </td>
-                      <td className="px-4 py-3 text-gray-400">{expense.note ?? '—'}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Link
-                            href={`/expenses/${expense.id}/edit`}
-                            className="text-xs font-medium text-gray-500 hover:text-gray-900"
-                          >
-                            Edit
-                          </Link>
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <Badge variant="outline">
+                          {PAYMENT_LABELS[expense.paymentMethod] ?? expense.paymentMethod}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="px-4 py-3 text-muted-foreground">
+                        {expense.note ?? '—'}
+                      </TableCell>
+                      <TableCell className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          <Button asChild variant="ghost" size="sm" className="h-9 px-2">
+                            <Link href={`/expenses/${expense.id}/edit`}>Edit</Link>
+                          </Button>
                           <DeleteExpenseButton expenseId={expense.id} />
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </TableBody>
+              </Table>
+            </Card>
 
             {/* Mobile card list */}
             <div className="flex flex-col gap-3 sm:hidden">
               {expenses.map((expense) => (
-                <div
-                  key={expense.id}
-                  className="rounded-xl border border-gray-200 bg-white p-4"
-                >
-                  <div className="mb-1 flex items-center justify-between">
-                    <span className="text-xs text-gray-400">{expense.date}</span>
-                    <span className="font-semibold text-gray-900">
-                      RM {Number(expense.amount).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-700">
-                    {expense.categoryName ?? '—'}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
-                    <span>
-                      {PAYMENT_LABELS[expense.paymentMethod] ?? expense.paymentMethod}
-                    </span>
+                <Card key={expense.id} className="shadow-sm">
+                  <CardContent className="p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">{expense.date}</span>
+                      <span className="text-base font-semibold">
+                        RM {Number(expense.amount).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {expense.categoryName && (
+                        <Badge variant="secondary">{expense.categoryName}</Badge>
+                      )}
+                      <Badge variant="outline">
+                        {PAYMENT_LABELS[expense.paymentMethod] ?? expense.paymentMethod}
+                      </Badge>
+                    </div>
                     {expense.note && (
-                      <span className="text-gray-400">· {expense.note}</span>
+                      <p className="mb-2 text-sm text-muted-foreground">{expense.note}</p>
                     )}
-                  </div>
-                  <div className="mt-3 flex items-center gap-4 border-t border-gray-50 pt-3">
-                    <Link
-                      href={`/expenses/${expense.id}/edit`}
-                      className="text-xs font-medium text-gray-500 hover:text-gray-900"
-                    >
-                      Edit
-                    </Link>
-                    <DeleteExpenseButton expenseId={expense.id} />
-                  </div>
-                </div>
+                    <div className="flex items-center gap-2 border-t pt-3">
+                      <Button asChild variant="ghost" size="sm" className="h-9 px-3">
+                        <Link href={`/expenses/${expense.id}/edit`}>Edit</Link>
+                      </Button>
+                      <DeleteExpenseButton expenseId={expense.id} />
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
 
@@ -147,23 +154,17 @@ export default async function ExpensesPage({
             {(page > 1 || hasNext) && (
               <div className="mt-6 flex items-center justify-between">
                 {page > 1 ? (
-                  <Link
-                    href={`/expenses?page=${page - 1}`}
-                    className="text-sm font-medium text-gray-700 hover:text-gray-900"
-                  >
-                    ← Previous
-                  </Link>
+                  <Button asChild variant="outline" className="h-11">
+                    <Link href={`/expenses?page=${page - 1}`}>← Previous</Link>
+                  </Button>
                 ) : (
                   <span />
                 )}
-                <span className="text-sm text-gray-500">Page {page}</span>
+                <span className="text-sm text-muted-foreground">Page {page}</span>
                 {hasNext ? (
-                  <Link
-                    href={`/expenses?page=${page + 1}`}
-                    className="text-sm font-medium text-gray-700 hover:text-gray-900"
-                  >
-                    Next →
-                  </Link>
+                  <Button asChild variant="outline" className="h-11">
+                    <Link href={`/expenses?page=${page + 1}`}>Next →</Link>
+                  </Button>
                 ) : (
                   <span />
                 )}

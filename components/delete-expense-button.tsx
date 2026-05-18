@@ -1,57 +1,63 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteExpenseAction } from '@/lib/actions/expenses';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 export default function DeleteExpenseButton({ expenseId }: { expenseId: string }) {
-  const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   function handleConfirm() {
     startTransition(async () => {
       await deleteExpenseAction(expenseId);
-      setOpen(false);
       router.refresh();
     });
   }
 
   return (
-    <>
-      <button
-        onClick={() => setOpen(true)}
-        className="text-xs font-medium text-red-500 hover:text-red-700"
-      >
-        Delete
-      </button>
-
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
-            <h2 className="mb-2 text-base font-semibold text-gray-900">
-              Delete this expense?
-            </h2>
-            <p className="mb-6 text-sm text-gray-500">This cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setOpen(false)}
-                disabled={isPending}
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={isPending}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {isPending ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 px-2 text-xs font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
+        >
+          Delete
+        </Button>
+      </DialogTrigger>
+      <DialogContent showCloseButton={false} className="rounded-xl">
+        <DialogHeader>
+          <DialogTitle>Delete this expense?</DialogTitle>
+          <DialogDescription>This cannot be undone.</DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="outline" disabled={isPending} className="h-11">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isPending}
+            className="h-11"
+          >
+            {isPending ? 'Deleting...' : 'Delete'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

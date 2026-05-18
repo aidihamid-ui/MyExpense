@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { authClient } from '@/lib/auth/client';
+import { Button } from '@/components/ui/button';
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -12,11 +13,12 @@ export default function LogoutButton() {
   }
 
   return (
-    <button
+    <Button
+      variant="outline"
       onClick={handleLogout}
-      className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      className="h-11 w-full"
     >
       Sign out
-    </button>
+    </Button>
   );
 }
