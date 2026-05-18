@@ -99,6 +99,7 @@ Full rules: `docs/subagent-rules.md`.
 - One phase at a time, no drift
 - Update `docs/architecture.md` immediately when an architectural decision is made
 - Commit at each working state
+- **After each milestone** (e.g. "DB layer done", "UI done", "deploy done"): update the docs listed in the Milestone Docs Rule below before moving on
 - Stuck >15 min → STOP and discuss approach with user
 
 **END:**
@@ -109,6 +110,23 @@ Full rules: `docs/subagent-rules.md`.
 5. Update `docs/handoff.md` (current state, what was done, what's next, blockers, decisions)
 6. If phase complete: tag (`v0.X-...`) and push
 7. Push to GitHub
+
+---
+
+## Milestone Docs Rule
+
+After every milestone — a named chunk of work within a session (e.g. "DB layer", "UI", "deploy") — update the relevant docs **before** starting the next milestone. Do not batch all doc updates to the very end of the session.
+
+| What changed | Update |
+|---|---|
+| New tables, schema changes, migrations | `docs/architecture.md` (ADR if a structural choice was made) |
+| New routes, server actions, or modules | `docs/architecture.md` + `docs/handoff.md` |
+| Structural / convention choice made | `docs/architecture.md` (ADR) immediately |
+| Phase or milestone complete | `docs/handoff.md` — reflect new state, what's next, blockers |
+| Setup steps, ports, env vars changed | `docs/quickstart.md` or `docs/environment.md` |
+| Deploy runbook changed | `docs/deployment.md` |
+
+When unsure which doc to update, ask before writing.
 
 ---
 
