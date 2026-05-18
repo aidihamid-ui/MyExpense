@@ -46,7 +46,7 @@ All three processes start without error:
 - Drizzle schema for `users` and `sessions`
 - Better-Auth configured (email/password; verification disabled for now)
 - Signup page, login page, logout button
-- Session middleware that protects `/dashboard`
+- Session guard via `proxy.ts` (Next.js 16's replacement for `middleware.ts`; runs on Node.js runtime) protecting `/dashboard`. Treat the proxy as a UX redirect, not a security boundary — the real auth check is in the protected server component (see ADR-006).
 - Local password reset flow (token-based)
 
 ### Test
@@ -60,36 +60,34 @@ All three processes start without error:
 
 ---
 
-## Phase 1.5 — First VPS Deploy (Day 4, ~half day)
+## Phase 1.5 — First VPS Deploy (COMPLETE)
 
-**Now you provision the VPS, while the app is still tiny.** Get the pipeline working before there's anything complicated to deploy.
+**Stack used:** Docker Compose + Traefik (not PM2 + Nginx as originally planned — VPS already had Traefik running for other apps).
 
-### VPS provisioning checklist
-- [ ] Buy Hostinger VPS (KVM 2 or higher, Ubuntu 22.04)
-- [ ] Buy domain, point A record to VPS IP (use subdomain `myexpense.{domain}`)
-- [ ] SSH in as root, create `deploy` user with sudo
-- [ ] Set up SSH key auth, disable password login
-- [ ] Install: Node 20, PostgreSQL 16, Python 3.11, Nginx, Certbot, PM2, ufw, fail2ban
-- [ ] Configure ufw: allow 22, 80, 443; block everything else
-- [ ] Get SSL cert via Certbot
-- [ ] Create Postgres DB + user on VPS
-- [ ] Create `/var/www/myexpense` (owned by deploy)
-- [ ] Create `/var/lib/myexpense/receipts` (owned by deploy, `chmod 700`)
-- [ ] Clone repo, `npm install`, `npm run build`, run migrations
-- [ ] Create `/var/www/myexpense/.env` with prod values (chmod 600)
-- [ ] PM2 ecosystem file (starts Next.js)
-- [ ] Nginx site: `myexpense.{domain}` → `localhost:3000`
-- [ ] Visit your domain over HTTPS, log in, log out
+**Live URL:** https://myexpense.srv1488589.hstgr.cloud
+**VPS:** Ubuntu 24.04, 187.77.155.88
 
-### Create
-`docs/deployment.md` — the runbook for future deploys.
+### What was built
+- `Dockerfile` — multi-stage: deps → builder (with build-time ENV placeholders) → runner (standalone, non-root) + migrator target
+- `docker-compose.yml` — app + postgres:17-alpine, Traefik labels, no shared network, no published ports
+- `.dockerignore`
+- `Makefile` — deploy, migrate, logs, backup, shell, ps
+- `scripts/backup-db.sh` — daily pg_dump, gzip, 30-day retention
+- `Docs/deployment.md` — pre-flight checklist + full runbook
 
-### Future deploys (after this)
+### Future deploys
 ```bash
-ssh deploy@myexpense.{domain}
-cd /var/www/myexpense
-git pull && npm install && npm run db:migrate && npm run build && pm2 reload all
+ssh root@187.77.155.88
+cd /docker/myexpense/repo
+make deploy      # git pull + rebuild + restart
+make migrate     # only if schema changed
 ```
+
+Full runbook: `Docs/deployment.md`.
+
+### Test
+- [x] Visit https://myexpense.srv1488589.hstgr.cloud — login page loads over HTTPS
+- [x] Log in / log out with test accounts
 
 ### Commit + tag
 `v0.1.5-first-deploy`
