@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-18
 **Last session by:** Claude
-**Current phase:** Between Phase 2 and Phase 3. shadcn/ui install in progress; Phase 3 Dashboard next.
+**Current phase:** Between Phase 2 and Phase 3. shadcn/ui installed and full restyle complete. Next: Phase 3 Dashboard.
 
 ---
 
@@ -69,7 +69,22 @@ _Security (verified):_
 - Phase 2 deployed to VPS (commit 99e63b9): Dockerfile build-time ENV placeholders updated to pass Zod validation; `make deploy` + `make migrate` run on VPS — Phase 2 now live at https://myexpense.srv1488589.hstgr.cloud ✓
 - ADR-017 recorded: shadcn/ui chosen as UI component library (see `Docs/architecture.md`)
 - `Docs/deployment.md` Troubleshooting: added warning about Dockerfile ENV placeholder shape requirements
-- shadcn/ui install in progress (Phase 3 pre-work)
+- shadcn/ui installed and all pages restyled (commit 378f80e) — see detail below
+
+### shadcn/ui restyle detail
+
+- `npx shadcn@latest init --preset nova` — Radix/nova, Tailwind v4, CSS vars
+- Blue primary theme via oklch CSS variables in `app/globals.css`
+- `lib/utils.ts` — `cn()` helper; `components/ui/` — button, card, dialog, input, select, textarea, badge, table, separator
+- `components/nav.tsx` — blue brand, active-link bg-primary/10, Separator
+- `app/(auth)/layout.tsx` — bg-slate-50, branding above card
+- Login + Signup — shadcn Card + Input + Button, h-11 (44px) tap targets
+- `expense-form.tsx` + `edit-expense-form.tsx` — shadcn Input, Select, Textarea, Button
+- `app/expenses/page.tsx` — Table (desktop), Card (mobile), Badge for category/payment
+- `app/dashboard/page.tsx` — 3-column Card grid with metric placeholders for Phase 3
+- `components/delete-expense-button.tsx` — migrated to shadcn Dialog
+- All page backgrounds bg-slate-50; cards shadow-sm + rounded-xl
+- **shadcn CLI note:** v4.7.0 removed `--style`/`--base-color` flags → use `--preset nova`
 
 ---
 
@@ -108,7 +123,7 @@ From `Docs/phases.md`:
 - Last 30 days running total
 - Filter expenses by date range and category
 
-**Pre-work:** Complete shadcn/ui install (in progress). VPS already on Phase 2 ✓.
+**Pre-work:** shadcn/ui installed and restyle complete ✓. VPS already on Phase 2 ✓.
 
 **On completion:** tag `v0.3-dashboard-done` → deploy.
 
@@ -116,7 +131,7 @@ From `Docs/phases.md`:
 
 ## Open Questions / Blockers
 
-- [ ] Complete shadcn/ui install (pre-Phase 3)
+- [x] shadcn/ui installed and all pages restyled ✓
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] PaddleOCR on Python 3.14: unknown. Needs Python 3.11 for Phase 5 (`py -3.11`)
 - [ ] ADR-013 revisit: 4 protected pages now (dashboard, expenses, expenses/new, expenses/[id]/edit) — approaching the "5 pages" revisit trigger for route group layout
