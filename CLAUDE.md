@@ -41,11 +41,12 @@ Read these as needed for the current task:
 |---|---|---|
 | `CLAUDE.md` (this) | Identity, critical rules, session protocol | Every session (auto-loaded) |
 | `docs/handoff.md` | Where the project is right now | Start of every session |
+| `docs/environment.md` | How to start/stop local services; terminal layout | First session of any new day; when env breaks |
 | `docs/build-plan.md` | Features, architecture, data flow, schema | Once at project start; refer back as needed |
-| `docs/phases.md` | Phase-by-phase build steps | Start of each phase |
-| `docs/conventions.md` | Coding conventions (TS, errors, naming) | When unsure about a code style |
+| `docs/phases.md` | Phase-by-phase build steps **and per-phase Test checklists** | Start of each phase + before declaring done |
+| `docs/conventions.md` | Coding conventions (TS, errors, naming, Drizzle, multi-tenancy pattern) | When unsure about a code style |
 | `docs/subagent-rules.md` | DeepSeek delegation rules | Before delegating anything |
-| `docs/git-workflow.md` | Branches, commits, tags, recovery | When working with git or recovering from a mistake |
+| `docs/git-workflow.md` | Branches, commits, tags, recovery, git identity setup | When working with git or recovering from a mistake |
 | `docs/master-prompts.md` | Reusable prompts (security review, deploy, etc.) | When user invokes one |
 | `docs/architecture.md` | Architectural decision records (ADRs) | When making/reviewing a structural choice |
 | `docs/security-log.md` | Security findings and fixes | After security reviews |
@@ -90,8 +91,9 @@ Full rules: `docs/subagent-rules.md`.
 
 **START:**
 1. Read this file + `docs/handoff.md`
-2. `git status` && `git log --oneline -10` — verify clean state
-3. Confirm with user what we're working on before writing code
+2. Before writing any code: scan the session prompt against the 10 critical rules in CLAUDE.md and every ADR in `docs/architecture.md`. If the prompt conflicts with any of them, list the conflict and wait for user response. Do not proceed until cleared. Known resolved discrepancies (Next.js version, PM2 vs Docker) do not need flagging.
+3. `git status` && `git log --oneline -10` — verify clean state
+4. Confirm with user what we're working on before writing code
 
 **DURING:**
 - One phase at a time, no drift
@@ -101,10 +103,12 @@ Full rules: `docs/subagent-rules.md`.
 
 **END:**
 1. Run typecheck and lint
-2. Commit or stash uncommitted work
-3. Update `docs/handoff.md` (current state, what was done, what's next, blockers, decisions)
-4. If phase complete: tag (`v0.X-...`) and push
-5. Push to GitHub
+2. **Run every check in the `### Test` section of `docs/phases.md` for the current phase.** Every item must pass before declaring the phase done. This is non-optional — see "Done" Definition below.
+3. **ADR audit.** Look back at what you built this session. Were any structural or convention choices made — runtime selections, naming conventions, casing, file-layout patterns, default behaviour applied across many call sites, library configuration that locks in a code-wide pattern? If yes, draft them as ADRs in `docs/architecture.md` **before** writing the handoff. Be honest about the reasoning you actually used at the time, including reasoning you skipped or defaulted on. The handoff should reference ADR numbers, not just describe the decisions in prose.
+4. Commit or stash uncommitted work
+5. Update `docs/handoff.md` (current state, what was done, what's next, blockers, decisions)
+6. If phase complete: tag (`v0.X-...`) and push
+7. Push to GitHub
 
 ---
 
@@ -118,6 +122,7 @@ Before doing any of:
 - Adding a new env var
 - Changing build/deploy/PM2 config
 - Adding a new top-level folder
+- **Making any choice that locks in a code-wide convention or pattern** — naming style, casing (camelCase vs snake_case for columns), file-layout convention, runtime choice (Node vs Edge), library config that applies across many call sites. Even if it feels minor in isolation, *width* makes it architectural. Surface it for ADR review BEFORE writing code that depends on it, not after.
 
 Better to ask once than refactor twice.
 
@@ -137,14 +142,17 @@ Full git workflow: `docs/git-workflow.md`.
 
 ## "Done" Definition (per phase)
 
-A phase isn't done until:
-1. Feature works end-to-end locally with two test accounts
-2. Multi-tenancy verified (account A can't see B's data — tried via UI + direct API + guessed IDs)
-3. All inputs validated server-side with Zod
-4. Errors handled and surfaced to user
-5. Mobile-responsive (375px width)
-6. `npm run typecheck` && `npm run lint` clean
-7. Committed with clear messages
-8. `docs/handoff.md` updated
-9. Phase milestone → tagged in git
-10. Phase 2+ → deployed to VPS, verified on live domain
+A phase isn't done until ALL of the following are true. Tick each off explicitly before writing the handoff:
+
+1. **Every item in the `### Test` section of `docs/phases.md` for this phase has been executed and passes.** No phase ships with unchecked test items. This is the primary gate — items 2–11 below are general defaults that some phases relax (e.g. Phase 0 has no user-facing feature, no multi-tenancy yet) and the per-phase Test section is what reflects the actual bar.
+2. Feature works end-to-end locally with two test accounts (where applicable)
+3. Multi-tenancy verified — account A can't see B's data, tried via UI + direct API call + guessed IDs
+4. All inputs validated server-side with Zod
+5. Errors handled and surfaced to user
+6. Mobile-responsive (375px width)
+7. `npm run typecheck` && `npm run lint` clean
+8. Committed with clear messages
+9. **ADR audit done** — any structural or convention choices made this phase are captured in `docs/architecture.md` (see Session Protocol END, step 3).
+10. `docs/handoff.md` updated
+11. Phase milestone → tagged in git
+12. Phase 2+ → deployed to VPS, verified on live domain
