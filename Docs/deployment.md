@@ -45,7 +45,13 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 free -h
 ```
 
-### 2 — Verify DNS
+### 2 — Install make (if not present)
+
+```bash
+apt-get install -y make
+```
+
+### 3 — Verify DNS
 
 DNS must resolve **before** Traefik can obtain a Let's Encrypt certificate.
 
@@ -55,7 +61,7 @@ dig myexpense.srv1488589.hstgr.cloud +short
 # If it returns anything else or nothing, fix the A record first.
 ```
 
-### 3 — Generate BETTER_AUTH_SECRET (do this on your LOCAL machine)
+### 4 — Generate BETTER_AUTH_SECRET (do this on your LOCAL machine)
 
 ```bash
 # Run locally — never generate secrets on the VPS
