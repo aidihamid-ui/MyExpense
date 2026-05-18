@@ -14,9 +14,9 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 # Build-time placeholders — Next.js standalone build requires these env vars to
 # be present at build time. They are overridden at runtime by the real .env on the VPS.
-ENV DATABASE_URL=placeholder
-ENV BETTER_AUTH_SECRET=placeholder
-ENV BETTER_AUTH_URL=placeholder
+ENV DATABASE_URL=postgresql://x:x@localhost:5432/x
+ENV BETTER_AUTH_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ENV BETTER_AUTH_URL=http://localhost:3000
 RUN npm run build
 
 # ── Stage 3: production runner (standalone, non-root) ─────────────────────────
