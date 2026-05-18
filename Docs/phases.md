@@ -94,25 +94,28 @@ Full runbook: `Docs/deployment.md`.
 
 ---
 
-## Phase 2 — Manual Expense Entry (Days 5-6, local)
+## Phase 2 — Manual Expense Entry (COMPLETE)
 
 **Deliverable:** Add, edit, delete expenses; see them listed.
 
-### Steps
-- Schema: `categories`, `expenses`
-- Seed default categories on signup (Food, Transport, Groceries, Utilities, Entertainment, Healthcare, Other)
-- "Add expense" form with Zod validation (amount, category, date, note, payment method)
-- Expenses list with sort (date desc) + pagination
-- Edit / delete with confirmation modal
-- All queries via `lib/db/queries.ts` with `userId` filter
+**Live locally. VPS deploy pending (`make deploy` + `make migrate`).**
+
+### What was built
+- `categories` + `expenses` schema; migration 0001; default categories seeded at signup
+- `/expenses` list — date-desc, 20/page pagination, desktop table + mobile cards
+- `/expenses/new` — add form with Zod validation, inline field errors
+- `/expenses/[id]/edit` — pre-filled edit form; wrong-owner → 404
+- Delete confirmation modal; `revalidatePath` + `router.refresh()` post-delete
+- ESLint configured (`eslint.config.mjs`, `npm run lint`)
 
 ### Test
-- Create 20 expenses across two accounts
-- Verify multi-tenancy: from account A's browser, try `GET /api/expenses/{B-expense-id}` — must fail
-- Edit and delete work; confirmation prevents accidents
+- [x] Create 20 expenses across two accounts (21 total)
+- [x] Multi-tenancy: user-b visits user-a's edit URL → HTTP 404; delete blocked at query layer
+- [x] Edit and delete work; confirmation prevents accidents
+- [x] `npm run typecheck` clean, `npm run lint` clean, `npm run build` passes
 
 ### Commit + tag
-`v0.2-expenses-done` — **deploy to VPS**.
+`v0.2-expenses-done` — **deploy to VPS pending**.
 
 ---
 

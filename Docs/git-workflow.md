@@ -4,11 +4,30 @@ How we use git in MyExpense. Read when working with version control or recoverin
 
 ---
 
+## First-Time Setup (per machine / per fresh clone)
+
+Git needs an identity for commits. Without this, `git commit` fails with "Please tell me who you are."
+
+```bash
+git config user.email "aidih@myexpense.local"
+git config user.name "aidih"
+```
+
+These are scoped to this repo (no `--global`). The same identity is already configured for the existing local clone.
+
+**Verify:**
+```bash
+git config user.email
+git config user.name
+```
+
+---
+
 ## Branch Model
 
-- **`main`** is always deployable and always working. Don't push broken code.
+- **`master`** is always deployable and always working. Don't push broken code.
 - Feature branches: `feature/short-name` (e.g., `feature/expense-entry`).
-- Merge to main only when the feature works end-to-end locally.
+- Merge to master only when the feature works end-to-end locally.
 
 ---
 
@@ -69,7 +88,7 @@ git checkout <commit-hash>  # to inspect
 
 # Go back to a known-good tagged state
 git checkout v0.2-expenses-done   # inspect
-git checkout main                  # come back
+git checkout master                # come back
 
 # See history graphically
 git log --oneline --graph --all
@@ -100,10 +119,12 @@ node_modules/
 /var/
 
 ocr-service/.venv/
+ocr-service/venv/
 ocr-service/__pycache__/
 
 .DS_Store
 *.swp
+.claude/
 ```
 
 ---
@@ -137,3 +158,10 @@ If a commit needs to bypass these (rare), `git commit --no-verify` works but sho
 - `git push` after every commit or two during a session.
 - `git push --tags` after creating any new tag.
 - The remote (GitHub) is your offsite backup. Don't go a day without pushing.
+
+Once the GitHub remote is set up for the first time:
+```bash
+git remote add origin git@github.com:<user>/myexpense.git
+git push -u origin master
+git push --tags
+```
