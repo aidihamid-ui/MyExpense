@@ -470,3 +470,92 @@ The route group approach requires moving `app/dashboard/` to `app/(app)/dashboar
 
 **Revisit trigger:**
 If we add more than 5 protected pages, or if Nav needs server-fetched state, migrate to the route group layout.
+
+---
+
+### ADR-014: `notFound()` for wrong-owner mutations (not redirect or error state)
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 2
+
+**Context:**
+When a user attempts to access or mutate an expense that belongs to a different user, the server needs to respond. Three options: redirect to `/expenses`, return an error state to the client, or render 404. The choice sets the security UX pattern for all protected routes.
+
+**Options considered:**
+
+1. **`redirect('/expenses')`** — Sends the user back to the list. Reveals that the resource exists (they are being redirected away, implying something is there). Leaks information.
+2. **Return error state** — Return `{ message: 'Not found.' }` from the server action. Correct for form state feedback but inconsistent with the page-level check.
+3. **`notFound()`** — Renders the 404 page. Does not reveal whether the resource exists or belongs to another user. Consistent behaviour from both page render (server component) and mutation (server action).
+
+**Decision:**
+`notFound()` in both the page server component (before rendering) and the server action (if ownership check fails after form submission).
+
+**Reasoning:**
+Principle of minimum information disclosure: if a user guesses another user's expense ID, they should see exactly the same response whether the ID doesn't exist or belongs to someone else. This makes enumeration attacks harder. It's also the idiomatic Next.js pattern for "this resource does not exist in your context."
+
+**Trade-offs we accept:**
+- `notFound()` inside a server action (invoked via `useActionState`) causes Next.js to navigate to the 404 page rather than returning an error state to the form. This is appropriate — a wrong-owner mutation is not a form validation error.
+- If `notFound()` is called inside a `catch` block, it rethrows `NEXT_NOT_FOUND` past the catch, which works correctly (JavaScript catch blocks do not catch throws from within themselves).
+
+**Revisit trigger:**
+If a future route requires a more nuanced response for wrong-owner access (e.g., a redirect to a specific "permission denied" page), override per-route rather than changing this default.
+
+---
+
+### ADR-015: Post-mutation cache invalidation: `revalidatePath` in action + `router.refresh()` in client
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 2
+
+**Context:**
+After a successful delete, the expenses list needs to reflect the change. Next.js App Router caches server component data. Two mechanisms are available: `revalidatePath` (server-side, marks the path stale) and `router.refresh()` (client-side, triggers a soft re-fetch of the current route).
+
+**Options considered:**
+
+1. **`revalidatePath` in server action only** — Marks `/expenses` as stale on the server. Next.js will re-render on next visit. But the client needs a signal to trigger that re-render without a full navigation.
+2. **`router.refresh()` in client component only** — Re-fetches the current route from the server. Without `revalidatePath`, cached server data might be served.
+3. **Both** — `revalidatePath('/expenses')` in the action marks the cache as stale. `router.refresh()` in the client immediately triggers a re-fetch against the now-stale cache.
+
+**Decision:**
+Both: `revalidatePath('/expenses')` in `deleteExpenseAction`, followed by `router.refresh()` in the `DeleteExpenseButton` client component.
+
+**Reasoning:**
+Belt-and-suspenders. `revalidatePath` is needed for server-side freshness guarantees; `router.refresh()` is needed to immediately update the client view without a full page navigation. Together they are explicit and reliable. The small overhead is acceptable.
+
+**Trade-offs we accept:**
+- Slight redundancy (one of the two might be sufficient in practice — Next.js docs suggest `revalidatePath` in a server action automatically invalidates in-flight renders)
+- Both calls are cheap and won't cause double-fetching in practice
+
+**Revisit trigger:**
+If Next.js behavior changes such that `revalidatePath` in a server action already triggers client re-render automatically, remove `router.refresh()`.
+
+---
+
+### ADR-016: ESLint with flat config (`eslint.config.mjs`) and `eslint-config-next`
+
+**Date:** 2026-05-18
+**Status:** Accepted
+**Phase:** Phase 2
+
+**Context:**
+Next.js 16 removed `next lint` entirely (previously available in v13–v15). Linting is now via the standard ESLint CLI. Need to decide the ESLint config format (flat vs legacy `.eslintrc`) and rule set.
+
+**Options considered:**
+
+1. **Legacy `.eslintrc.json` + `eslint-config-next`** — Still supported by ESLint 9, but deprecated. `next lint` removal makes this a dead end.
+2. **Flat config `eslint.config.mjs` + `eslint-config-next` + TypeScript rules** — The documented path for Next.js 16. Uses `eslint-config-next/core-web-vitals` + `eslint-config-next/typescript`.
+
+**Decision:**
+Flat config with `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`.
+
+**Reasoning:**
+Next.js 16 docs explicitly prescribe this. No legacy format justification. TypeScript rules catch real bugs (unused vars, `any` abuse). Rule override added for `@typescript-eslint/no-unused-vars` to respect the `_`-prefix convention used in `queries.ts` (`_sortBy`).
+
+**Trade-offs we accept:**
+- Must maintain `eslint.config.mjs` as the canonical lint config
+- Any future rule overrides go in `eslint.config.mjs` rather than inline `// eslint-disable` comments (prefer config-level suppressions)
+
+**Revisit trigger:**
+If `eslint-config-next` version diverges from the installed Next.js version and causes false positives.

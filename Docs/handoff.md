@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-18
 **Last session by:** Claude
-**Current phase:** Phase 2 — Manual Expense Entry (list + add form done; edit/delete pending)
+**Current phase:** Phase 2 — COMPLETE. Next: Phase 3 — Dashboard.
 
 ---
 
@@ -16,58 +16,66 @@
 - PostgreSQL 17.10 via Scoop at `localhost:5432`
   - Role: `myexpense` / password: `myexpense_dev` / DB: `myexpense_dev`
 - Better-Auth 1.6.11 email/password auth (verification disabled)
-- Session guard: `proxy.ts` → `/dashboard` and `/expenses` without cookie redirect to `/login`
-- Dashboard + Expenses server components: double-check session, redirect if null
+- Session guard: `proxy.ts` — `/dashboard` and `/expenses/:path*` without cookie redirect to `/login`
+- All protected server components double-check session with `auth.api.getSession()`
 - Two test accounts in DB: `user-a@test.com` / `user-b@test.com` (password: `password123`)
 - `npm run typecheck` — clean
-- `npm run build` — passes (last verified Phase 1.5; not re-run this session)
+- `npm run lint` — clean (ESLint flat config, `eslint-config-next/core-web-vitals` + TypeScript rules)
+- `npm run build` — passes
 - **VPS deploy live at https://myexpense.srv1488589.hstgr.cloud** ✓
 - GitHub: `https://github.com/aidihamid-ui/MyExpense.git` — up to date
-- Tagged `v0.1.5-first-deploy`
 
-**Phase 2 DB layer complete (not yet deployed):**
-- `categories` + `expenses` tables in schema and DB (migration 0001 applied locally)
+**Phase 2 — COMPLETE (all sessions):**
+
+_DB layer:_
+- `categories` + `expenses` tables in schema and DB (migration 0001 applied locally; VPS still on Phase 1 schema — deploy + `make migrate` pending)
 - `seedDefaultCategories(userId)` — idempotent, fires via `databaseHooks.user.create.after`
-- `lib/db/queries.ts` — `getCategories`, `getExpenses`, `getExpenseById`, `createExpense`, `updateExpense`, `deleteExpense`
-- `lib/validators/expense.ts` — `createExpenseSchema` + `updateExpenseSchema` (Zod 4)
+- `lib/db/queries.ts` — full CRUD with userId filter on all operations
+- `lib/validators/expense.ts` — `createExpenseSchema` + `updateExpenseSchema`
 
-**Phase 2 UI (Session 2) — complete:**
-- `/expenses` — paginated list (20/page, prev/next), desktop table + mobile cards, empty state
-- `/expenses/new` — add expense form: amount, category dropdown, date (default today), payment method, note
-- `lib/actions/expenses.ts` — `createExpenseAction` server action: validates with Zod, creates expense, redirects to `/expenses`
-- `components/nav.tsx` — shared nav bar (Dashboard + Expenses links) on all authenticated pages
-- ADRs 012 (server actions in `lib/actions/`) and 013 (nav component vs route group) recorded
+_UI layer:_
+- `/expenses` — paginated list (20/page prev/next), desktop table + mobile cards, empty state, Edit + Delete per row
+- `/expenses/new` — add form (amount, category, date, payment method, note), field-level Zod errors
+- `/expenses/[id]/edit` — pre-filled edit form, same validation; wrong-owner → 404
+- Delete confirmation modal (`components/delete-expense-button.tsx`) — `revalidatePath` + `router.refresh()` on success
+- `lib/actions/expenses.ts` — `createExpenseAction`, `updateExpenseAction`, `deleteExpenseAction`
+- `components/nav.tsx` — shared nav bar (Dashboard + Expenses)
+- ESLint configured: `eslint.config.mjs`, `npm run lint` script
+- Tagged `v0.2-expenses-done`
+
+_Security (verified):_
+- user-b visiting `/expenses/[user-a-id]/edit` → HTTP 404
+- Query layer: `getExpenseById(user-b-id, user-a-expense-id)` → 0 rows → delete blocked → expense intact
 
 **For startup commands and the full local env runbook, see `Docs/environment.md`.**
 **For VPS deploy and future deploys, see `Docs/deployment.md`.**
 
 ### What's broken or incomplete
 
-- Phase 2 UI partially done: edit expense and delete with confirmation not yet built
-- Migration 0001 applied locally only — VPS still on Phase 1 schema (`make migrate` needed after next deploy)
+- VPS not yet updated to Phase 2: run `make deploy` then `make migrate` (migration 0001)
 - PaddleOCR not installed (deferred to Phase 5; needs Python 3.11)
-- No lint config yet (ESLint not set up — non-blocking)
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
 
 ### Last known-good git state
 
 - Branch: master
-- Last commit: `d5697fc` — `[Phase 2] feat: expense list and add expense form`
-- Last tag: `v0.1.5-first-deploy`
+- Last commit: see `git log --oneline -3`
+- Last tag: `v0.2-expenses-done`
 
 ---
 
-## What Was Done — Phase 2 UI: list + add form (this session)
+## What Was Done — Phase 2 Session 3 (this session — final)
 
-- `components/nav.tsx` — shared nav bar client component (Dashboard + Expenses links)
-- `app/dashboard/page.tsx` — integrated Nav, removed "Phase 2 pending" placeholder text
-- `proxy.ts` — extended matcher to `/expenses/:path*`
-- `lib/actions/expenses.ts` — `createExpenseAction` server action: parses FormData, validates with `createExpenseSchema`, calls `createExpense(userId, ...)`, redirects on success, returns field-level errors on failure
-- `app/expenses/page.tsx` — paginated expense list (20/page, limit+1 trick for next-page detection), desktop table + mobile card layout, empty state, prev/next pagination
-- `app/expenses/new/page.tsx` — server component: auth guard, fetches categories, renders client form
-- `app/expenses/new/expense-form.tsx` — client component: `useActionState` with `createExpenseAction`, inline field-level Zod errors, pending state disables submit
-- ADRs 012–013 recorded
-- `npm run typecheck` — clean
+- `app/expenses/[id]/edit/page.tsx` — edit page: fetches expense by `(userId, id)`, `notFound()` if missing/wrong-owner, renders pre-filled form
+- `app/expenses/[id]/edit/edit-expense-form.tsx` — pre-filled client form, `updateExpenseAction`, hidden `expenseId` field, full Zod validation
+- `lib/actions/expenses.ts` — added `updateExpenseAction` (validates, updates, notFound if wrong owner, redirect on success) and `deleteExpenseAction` (notFound if wrong owner, `revalidatePath` on success)
+- `components/delete-expense-button.tsx` — Delete button + confirmation modal, `startTransition` + `router.refresh()` post-delete
+- `app/expenses/page.tsx` — added Edit link + DeleteExpenseButton to both desktop table and mobile cards
+- ESLint setup: installed `eslint` + `eslint-config-next`, created `eslint.config.mjs` (flat config, core-web-vitals + TypeScript), added `lint` script to `package.json`
+- ADRs 014–016 recorded
+- `npm run typecheck` clean, `npm run lint` clean, `npm run build` passes
+- Phase 2 test checklist: all items pass (see security test results above)
+- Tagged `v0.2-expenses-done`, pushed
 
 ## What Was Done — Phase 2 DB layer (previous session)
 
@@ -83,22 +91,23 @@
 
 ---
 
-## Next Up — Phase 2 UI (remaining)
+## Next Up — Phase 3: Dashboard
 
-- Edit expense modal — pre-filled form, validated with `updateExpenseSchema`, calls `updateExpense`
-- Delete with confirmation — modal or inline confirm, calls `deleteExpense`
+From `Docs/phases.md`:
+- Current month total + last month for comparison
+- Category breakdown (table — chart in V2)
+- Last 30 days running total
+- Filter expenses by date range and category
 
-**Test gate (from phases.md):**
-- Create 20 expenses across two accounts
-- Verify multi-tenancy: from account A's browser, try `GET /api/expenses/{B-expense-id}` — must fail
-- Edit and delete work; confirmation prevents accidents
+**Pre-work:** Deploy Phase 2 to VPS first (`make deploy` + `make migrate`).
 
-**On completion:** `npm run typecheck` + `npm run build` clean → tag `v0.2-expenses-done` → deploy to VPS → `make migrate` on VPS.
+**On completion:** tag `v0.3-dashboard-done` → deploy.
 
 ---
 
 ## Open Questions / Blockers
 
-- [ ] VPS migration pending: run `make migrate` after deploying Phase 2
+- [ ] Deploy Phase 2 to VPS: `make deploy` + `make migrate` (migration 0001)
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] PaddleOCR on Python 3.14: unknown. Needs Python 3.11 for Phase 5 (`py -3.11`)
+- [ ] ADR-013 revisit: 3 protected pages now (dashboard, expenses, expenses/new, expenses/[id]/edit) — approaching the "5 pages" revisit trigger for route group layout

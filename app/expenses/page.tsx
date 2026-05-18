@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getExpenses } from '@/lib/db/queries';
 import Nav from '@/components/nav';
+import DeleteExpenseButton from '@/components/delete-expense-button';
 
 const PAYMENT_LABELS: Record<string, string> = {
   cash: 'Cash',
@@ -68,6 +69,7 @@ export default async function ExpensesPage({
                     <th className="px-4 py-3 text-right font-medium text-gray-500">Amount (RM)</th>
                     <th className="px-4 py-3 font-medium text-gray-500">Payment</th>
                     <th className="px-4 py-3 font-medium text-gray-500">Note</th>
+                    <th className="px-4 py-3 font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -87,6 +89,17 @@ export default async function ExpensesPage({
                         {PAYMENT_LABELS[expense.paymentMethod] ?? expense.paymentMethod}
                       </td>
                       <td className="px-4 py-3 text-gray-400">{expense.note ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <Link
+                            href={`/expenses/${expense.id}/edit`}
+                            className="text-xs font-medium text-gray-500 hover:text-gray-900"
+                          >
+                            Edit
+                          </Link>
+                          <DeleteExpenseButton expenseId={expense.id} />
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -116,6 +129,15 @@ export default async function ExpensesPage({
                     {expense.note && (
                       <span className="text-gray-400">· {expense.note}</span>
                     )}
+                  </div>
+                  <div className="mt-3 flex items-center gap-4 border-t border-gray-50 pt-3">
+                    <Link
+                      href={`/expenses/${expense.id}/edit`}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-900"
+                    >
+                      Edit
+                    </Link>
+                    <DeleteExpenseButton expenseId={expense.id} />
                   </div>
                 </div>
               ))}
