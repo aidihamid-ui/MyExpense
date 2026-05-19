@@ -84,7 +84,7 @@ _Security (verified):_
 
 - PaddleOCR not installed (deferred to Phase 5; needs Python 3.11)
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
-- Phase 3 **not yet deployed to VPS** — pending `make deploy` + `make migrate` (no schema changes in Phase 3, so `make migrate` is a no-op but should still be run per the runbook)
+- Phase 3 **deployed and verified on VPS** ✓ (2026-05-19)
 - `app/dashboard/logout-button.tsx` is now unused (Sign Out moved to Nav); can be deleted when convenient
 
 ### Last known-good git state
