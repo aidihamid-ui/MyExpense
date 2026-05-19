@@ -22,7 +22,7 @@
 - `npm run typecheck` — clean
 - `npm run lint` — clean (ESLint flat config, `eslint-config-next/core-web-vitals` + TypeScript rules)
 - `npm run build` — passes
-- **VPS deploy live at https://myexpense.srv1488589.hstgr.cloud** ✓ (Phase 2; Phase 3 deploy pending)
+- **VPS deploy live at https://myexpense.srv1488589.hstgr.cloud** ✓ (Phase 3 — deployed and verified 2026-05-19)
 - GitHub: `https://github.com/aidihamid-ui/MyExpense.git` — up to date
 
 **Phase 3 — COMPLETE:**
@@ -153,8 +153,8 @@ From `Docs/phases.md`:
 
 ## Open Questions / Blockers
 
-- [ ] Deploy Phase 3 to VPS (Phase 4 pre-work)
-- [ ] Run Phase 3 test checklist manually (see above)
+- [x] Deploy Phase 3 to VPS — done 2026-05-19 ✓
+- [x] Run Phase 3 test checklist — all passed ✓
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] PaddleOCR on Python 3.14: unknown. Needs Python 3.11 for Phase 5 (`py -3.11`)
 - [ ] ADR-013 revisit: 4 protected pages now — approaching the "5 pages" revisit trigger for route group layout

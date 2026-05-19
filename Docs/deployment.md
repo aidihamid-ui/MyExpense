@@ -246,6 +246,13 @@ gunzip -c /var/backups/myexpense/db-<timestamp>.sql.gz \
 → Confirm Postgres is healthy first: `make ps`
 → Confirm `DATABASE_URL` in `.env` matches `POSTGRES_USER`/`POSTGRES_PASSWORD`
 
+**`make migrate` exits silently but tables still missing**
+→ Root cause (hit in Phase 3 deploy): `make migrate` ran successfully but drizzle-kit silently skipped a migration because the journal (`__drizzle_migrations`) was out of sync — it had 0000 recorded but not 0001.
+→ Diagnose: `docker compose exec db psql -U postgres` then `\c <dbname>` then `\dt` — see which tables actually exist, and `SELECT * FROM "__drizzle_migrations";` to compare with files in `drizzle/`.
+→ Fix: if journal is missing an entry, manually run the SQL from `drizzle/0001_*.sql` in psql, then insert the missing row into `__drizzle_migrations`.
+→ After any manual fix, run `make migrate` once more — it should exit with no output, confirming journal and schema are in sync.
+→ **Signup side effect:** `databaseHooks.user.create.after` seeds default categories at signup. If `categories` table didn't exist at signup time, the seed fails silently. Accounts created before the migration was applied will have no categories. Fix: sign out and sign up with a new account, or manually insert categories via psql.
+
 **Build OOMs / killed**
 → VPS ran out of memory. Add swap (Pre-flight step 1) and retry.
 
