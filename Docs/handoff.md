@@ -22,7 +22,7 @@
 - `npm run typecheck` — clean
 - `npm run lint` — clean (ESLint flat config, `eslint-config-next/core-web-vitals` + TypeScript rules)
 - `npm run build` — passes
-- **VPS deploy live at https://myexpense.srv1488589.hstgr.cloud** ✓ (Phase 3 — deployed and verified 2026-05-19)
+- **VPS deploy live at https://myexpense.srv1488589.hstgr.cloud** ✓ (Phase 4 — deployed and verified 2026-05-19)
 - GitHub: `https://github.com/aidihamid-ui/MyExpense.git` — up to date
 
 **Phase 4 — COMPLETE:**
@@ -117,7 +117,7 @@ _Security (verified):_
 
 - PaddleOCR not installed (deferred to Phase 5; needs Python 3.11)
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
-- Phase 4 **not yet deployed to VPS** — deploy when ready: `make deploy` + `make migrate`
+- Phase 4 **deployed and verified on VPS** ✓ (2026-05-19)
 - `app/dashboard/logout-button.tsx` is now unused (Sign Out moved to Nav); can be deleted when convenient
 
 ### Phase 4 Test Checklist Status
@@ -197,7 +197,7 @@ Phase 5 sub-steps: Python FastAPI OCR service → OcrProvider interface → Post
 - [x] Deploy Phase 3 to VPS — done 2026-05-19 ✓
 - [x] Run Phase 3 test checklist — all passed ✓
 - [x] Phase 4 complete locally ✓
-- [ ] Deploy Phase 4 to VPS — `make deploy` + `make migrate` (migration 0002)
+- [x] Deploy Phase 4 to VPS — done 2026-05-19 ✓
 - [ ] Manual browser test checklist for Phase 4 (5 formats, .exe rejection, 10MB rejection)
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] PaddleOCR on Python 3.14: unknown. Needs Python 3.11 for Phase 5 (`py -3.11`)
