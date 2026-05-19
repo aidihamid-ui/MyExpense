@@ -17,6 +17,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL=postgresql://x:x@localhost:5432/x
 ENV BETTER_AUTH_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ENV BETTER_AUTH_URL=http://localhost:3000
+ENV STORAGE_PATH=/tmp/receipts
 RUN npm run build
 
 # ── Stage 3: production runner (standalone, non-root) ─────────────────────────

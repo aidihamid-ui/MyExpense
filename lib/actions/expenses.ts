@@ -41,6 +41,8 @@ export async function createExpenseAction(
     return { errors: result.error.flatten().fieldErrors };
   }
 
+  const receiptId = (formData.get('receiptId') as string) || undefined;
+
   try {
     await createExpense(session.user.id, {
       categoryId: result.data.categoryId,
@@ -48,6 +50,7 @@ export async function createExpenseAction(
       date: result.data.date,
       note: result.data.note,
       paymentMethod: result.data.paymentMethod,
+      receiptId: receiptId ?? null,
     });
   } catch {
     return { message: 'Something went wrong. Please try again.' };

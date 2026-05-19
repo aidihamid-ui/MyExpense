@@ -5,7 +5,7 @@
  */
 
 import { db } from '@/lib/db';
-import { categories, expenses } from '@/lib/db/schema';
+import { categories, expenses, receipts } from '@/lib/db/schema';
 import { and, count, desc, eq, gte, lt, lte, sum } from 'drizzle-orm';
 
 // ── Categories ──────────────────────────────────────────────────────────────
@@ -38,6 +38,7 @@ export async function getExpenses(
       date: expenses.date,
       note: expenses.note,
       paymentMethod: expenses.paymentMethod,
+      receiptId: expenses.receiptId,
       createdAt: expenses.createdAt,
       updatedAt: expenses.updatedAt,
     })
@@ -78,6 +79,7 @@ export async function createExpense(
     date: string;
     note?: string | null;
     paymentMethod: string;
+    receiptId?: string | null;
   }
 ) {
   const [created] = await db
@@ -261,3 +263,29 @@ export async function getFilteredExpenseSummary(
 
 // getUserCategories re-uses getCategories (per-user, ADR-010 compliant)
 export const getUserCategories = getCategories;
+
+// ── Receipts ─────────────────────────────────────────────────────────────────
+
+export async function createReceipt(
+  userId: string,
+  data: {
+    imagePath: string;
+    originalName: string;
+    mimeType: string;
+    sizeBytes: number;
+  }
+) {
+  const [created] = await db
+    .insert(receipts)
+    .values({ userId, ...data, status: 'pending' })
+    .returning();
+  return created;
+}
+
+export async function getReceiptById(userId: string, receiptId: string) {
+  const [row] = await db
+    .select()
+    .from(receipts)
+    .where(and(eq(receipts.id, receiptId), eq(receipts.userId, userId)));
+  return row ?? null;
+}

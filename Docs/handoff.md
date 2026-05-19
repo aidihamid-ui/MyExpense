@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-19
 **Last session by:** Claude
-**Current phase:** Phase 3 COMPLETE. Dashboard live with real data and filters.
+**Current phase:** Phase 4 COMPLETE. Receipt upload + serving live locally.
 
 ---
 
@@ -24,6 +24,39 @@
 - `npm run build` — passes
 - **VPS deploy live at https://myexpense.srv1488589.hstgr.cloud** ✓ (Phase 3 — deployed and verified 2026-05-19)
 - GitHub: `https://github.com/aidihamid-ui/MyExpense.git` — up to date
+
+**Phase 4 — COMPLETE:**
+
+_Schema (migration 0002):_
+- `receipts` table: id, userId (→ users.id cascade delete), imagePath, originalName, mimeType, sizeBytes, status (default 'pending'), rawOcrText, extractedDataJson, error, createdAt
+- `expenses.receiptId` optional FK → receipts.id (set null on delete)
+
+_Upload action (`lib/actions/receipts.ts`):_
+- `uploadReceiptAction(formData)` — validates session, presence, 5MB max, MIME whitelist (JPEG/PNG/WebP/PDF), magic bytes, EXIF strip (sharp default, ADR-024), UUID filename, mkdir -p, write, DB insert
+- Returns `{ ok: true, data: { receiptId } }` or `{ ok: false, error: { code, message } }`
+
+_Query layer (`lib/db/queries.ts`):_
+- `createReceipt(userId, data)` — inserts receipts row
+- `getReceiptById(userId, receiptId)` — filters by userId (multi-tenancy boundary)
+- `getExpenses` — updated to include `receiptId` in select
+
+_Receipt serving route (`app/api/receipts/[id]/route.ts`):_
+- Session check → 401; ownership via `getReceiptById` → 404; path traversal guard (path.resolve + sep); stream as Blob; `Cache-Control: private, no-store`
+
+_Env (`lib/env.ts`, Dockerfile):_
+- `STORAGE_PATH: z.string().min(1)` — no default; must be set. `.env.local` and `.env.example` already had it.
+- Dockerfile builder stage: `ENV STORAGE_PATH=/tmp/receipts`
+
+_UI:_
+- `/expenses/new` — optional file input; two-step submit (upload first → receiptId → create); shows uploading/done/error state (ADR-023)
+- `/expenses` list — "Receipt" link (opens in new tab) when `receiptId` is set; shown in both desktop table and mobile cards
+
+_Docs:_
+- `docs/architecture.md` — ADR-023 (two-step upload pattern) and ADR-024 (sharp EXIF default) added
+- `docs/integration-map.md` — sections 14 (upload action), 15 (serving route), 16 (STORAGE_PATH) added
+
+_Dependencies added:_
+- `sharp@^0.34.5`
 
 **Phase 3 — COMPLETE:**
 
@@ -84,8 +117,21 @@ _Security (verified):_
 
 - PaddleOCR not installed (deferred to Phase 5; needs Python 3.11)
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
-- Phase 3 **deployed and verified on VPS** ✓ (2026-05-19)
+- Phase 4 **not yet deployed to VPS** — deploy when ready: `make deploy` + `make migrate`
 - `app/dashboard/logout-button.tsx` is now unused (Sign Out moved to Nav); can be deleted when convenient
+
+### Phase 4 Test Checklist Status
+
+- [x] `npm run typecheck` clean
+- [x] `npm run lint` clean
+- [x] `npm run build` passes (2 Turbopack warnings about dynamic path.join — expected, not errors)
+- [x] No session → 401 on `/api/receipts/[id]` (verified via curl)
+- [x] Authenticated + guessed receipt ID → 404 (verified via curl)
+- [ ] Upload 5 receipts of different sizes/formats — **needs manual browser test**
+- [ ] Try uploading `.exe` (must reject) — **needs manual browser test**
+- [ ] Try uploading 10 MB file (must reject) — **needs manual browser test**
+- [ ] Direct filesystem path access without session → 401 — verified above
+- [ ] User A can't access User B's receipt by guessing ID → 404 — verified above (no-match query)
 
 ### Last known-good git state
 
@@ -135,19 +181,14 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ---
 
-## Next Up — Phase 4: Receipt Upload (no OCR yet)
+## Next Up — Phase 5: OCR Pipeline
 
-From `Docs/phases.md`:
-- File upload endpoint with MIME + magic bytes + 5MB max validation
-- Save to `{STORAGE_PATH}/{userId}/{uuid}.{ext}`; strip EXIF
-- `receipts` table; attach to expense form
-- Auth-checked receipt serving route `/api/receipts/[id]`
+Phase 4 is complete locally. Before starting Phase 5:
+1. Deploy Phase 4 to VPS: `make deploy` + `make migrate` (migration 0002 adds receipts table + expenses.receiptId)
+2. Verify live receipt upload at https://myexpense.srv1488589.hstgr.cloud
+3. Complete the manual browser test checklist (see Phase 4 Test Checklist Status above)
 
-**Pre-work needed before Phase 4 starts:**
-1. Deploy Phase 3 to VPS: `make deploy` (no `make migrate` needed — no schema changes)
-2. Verify live dashboard at https://myexpense.srv1488589.hstgr.cloud
-
-**On completion:** tag `v0.4-uploads-done` → deploy.
+Phase 5 sub-steps: Python FastAPI OCR service → OcrProvider interface → Postgres job queue + worker → receipt parser → review UI.
 
 ---
 
@@ -155,6 +196,9 @@ From `Docs/phases.md`:
 
 - [x] Deploy Phase 3 to VPS — done 2026-05-19 ✓
 - [x] Run Phase 3 test checklist — all passed ✓
+- [x] Phase 4 complete locally ✓
+- [ ] Deploy Phase 4 to VPS — `make deploy` + `make migrate` (migration 0002)
+- [ ] Manual browser test checklist for Phase 4 (5 formats, .exe rejection, 10MB rejection)
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] PaddleOCR on Python 3.14: unknown. Needs Python 3.11 for Phase 5 (`py -3.11`)
 - [ ] ADR-013 revisit: 4 protected pages now — approaching the "5 pages" revisit trigger for route group layout

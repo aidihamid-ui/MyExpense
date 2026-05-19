@@ -206,6 +206,60 @@ const year = nowMYT.getUTCFullYear();
 
 ---
 
+## 14. Receipt upload action (Phase 4+)
+
+**Rule:** Call `uploadReceiptAction(formData)` where `formData` has a `receipt` key set to a `File`. Call this BEFORE `createExpenseAction` to obtain a `receiptId`, then pass it as `formData.set('receiptId', receiptId)` to the create action. Never call upload inside `createExpenseAction` — they are separate concerns (ADR-023).
+
+**File:** `lib/actions/receipts.ts`
+
+**Return type:**
+```ts
+type UploadReceiptResult =
+  | { ok: true; data: { receiptId: string } }
+  | { ok: false; error: { code: string; message: string } };
+```
+
+**Validation order (reject at first failure):**
+1. Session (→ `UNAUTHORIZED`)
+2. File presence (→ `NO_FILE`)
+3. Size ≤5 MB (→ `FILE_TOO_LARGE`)
+4. MIME whitelist: `image/jpeg | image/png | image/webp | application/pdf` (→ `INVALID_MIME`)
+5. Magic bytes (→ `MAGIC_MISMATCH`)
+6. EXIF strip via sharp default (images only; PDFs pass through)
+7. UUID filename + `{STORAGE_PATH}/{userId}/{uuid}.ext`
+8. Insert `receipts` row (status: `pending`) → return `receiptId`
+
+---
+
+## 15. Receipt serving route (Phase 4+)
+
+**Rule:** `GET /api/receipts/[id]` checks session (401 if missing), fetches via `getReceiptById(userId, id)` (404 if not found or wrong owner), applies path traversal guard, and streams the file. Response: `Cache-Control: private, no-store`. Never use 403 — always 404 for wrong-owner to avoid leaking existence (ADR-014).
+
+**File:** `app/api/receipts/[id]/route.ts`
+
+**Path traversal guard:**
+```ts
+const resolvedPath = path.resolve(receipt.imagePath);
+const resolvedStorage = path.resolve(env.STORAGE_PATH);
+if (!resolvedPath.startsWith(resolvedStorage + path.sep)) return 404;
+```
+
+---
+
+## 16. STORAGE_PATH env var (Phase 4+)
+
+**Rule:** `STORAGE_PATH` is validated at boot via `lib/env.ts` as `z.string().min(1)` — no default. Must be set in `.env.local` locally. VPS `.env` uses `/var/lib/myexpense/receipts`. Dockerfile builder stage uses `/tmp/receipts` as a placeholder so the build doesn't fail.
+
+**File:** `lib/env.ts`, `.env.local`, `.env.example`, `Dockerfile`
+
+**Example:**
+```ts
+import { env } from '@/lib/env';
+const userDir = path.join(env.STORAGE_PATH, userId);
+```
+
+---
+
 ## 13. Select component pattern — two modes
 
 **Rule:** Radix Select has two valid patterns in this codebase (ADR-018, ADR-021):

@@ -108,6 +108,17 @@ export default async function ExpensesPage({
                           <Button asChild variant="ghost" size="sm" className="h-9 px-2">
                             <Link href={`/expenses/${expense.id}/edit`}>Edit</Link>
                           </Button>
+                          {expense.receiptId && (
+                            <Button asChild variant="ghost" size="sm" className="h-9 px-2">
+                              <Link
+                                href={`/api/receipts/${expense.receiptId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                Receipt
+                              </Link>
+                            </Button>
+                          )}
                           <DeleteExpenseButton expenseId={expense.id} />
                         </div>
                       </TableCell>
@@ -143,6 +154,17 @@ export default async function ExpensesPage({
                       <Button asChild variant="ghost" size="sm" className="h-9 px-3">
                         <Link href={`/expenses/${expense.id}/edit`}>Edit</Link>
                       </Button>
+                      {expense.receiptId && (
+                        <Button asChild variant="ghost" size="sm" className="h-9 px-3">
+                          <Link
+                            href={`/api/receipts/${expense.receiptId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Receipt
+                          </Link>
+                        </Button>
+                      )}
                       <DeleteExpenseButton expenseId={expense.id} />
                     </div>
                   </CardContent>

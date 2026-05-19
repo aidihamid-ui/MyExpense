@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { createExpenseAction, type CreateExpenseState } from '@/lib/actions/expenses';
+import { uploadReceiptAction } from '@/lib/actions/receipts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,10 +27,56 @@ const PAYMENT_METHODS = [
 const today = new Date().toISOString().split('T')[0];
 
 export default function ExpenseForm({ categories }: { categories: Category[] }) {
-  const [state, formAction, pending] = useActionState<CreateExpenseState, FormData>(
+  const [state, dispatch] = useActionState<CreateExpenseState, FormData>(
     createExpenseAction,
     null,
   );
+  const [isPending, startTransition] = useTransition();
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>(
+    'idle',
+  );
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingReceiptId, setPendingReceiptId] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+
+    const fileInput = form.elements.namedItem('receiptFile') as HTMLInputElement | null;
+    const file = fileInput?.files?.[0];
+
+    let receiptId = pendingReceiptId;
+
+    if (file) {
+      setUploadStatus('uploading');
+      setUploadError(null);
+
+      const uploadData = new FormData();
+      uploadData.set('receipt', file);
+      const result = await uploadReceiptAction(uploadData);
+
+      if (!result.ok) {
+        setUploadStatus('error');
+        setUploadError(result.error.message);
+        return;
+      }
+
+      setUploadStatus('done');
+      receiptId = result.data.receiptId;
+      setPendingReceiptId(receiptId);
+    }
+
+    if (receiptId) {
+      formData.set('receiptId', receiptId);
+    }
+
+    startTransition(() => {
+      dispatch(formData);
+    });
+  }
+
+  const submitting = isPending || uploadStatus === 'uploading';
 
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm">
@@ -39,7 +86,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         </div>
       )}
 
-      <form action={formAction} className="flex flex-col gap-5">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         {/* Amount */}
         <div>
           <label htmlFor="amount" className="mb-1.5 block text-sm font-medium">
@@ -141,13 +188,36 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
           )}
         </div>
 
+        {/* Receipt upload */}
+        <div>
+          <label htmlFor="receiptFile" className="mb-1.5 block text-sm font-medium">
+            Receipt <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+          </label>
+          <Input
+            id="receiptFile"
+            name="receiptFile"
+            type="file"
+            accept="image/jpeg,image/png,image/webp,application/pdf"
+            className="h-11 cursor-pointer file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-muted file:px-3 file:py-1 file:text-sm"
+          />
+          {uploadStatus === 'uploading' && (
+            <p className="mt-1 text-xs text-muted-foreground">Uploading receipt…</p>
+          )}
+          {uploadStatus === 'done' && (
+            <p className="mt-1 text-xs text-green-600">Receipt uploaded.</p>
+          )}
+          {uploadStatus === 'error' && (
+            <p className="mt-1 text-xs text-destructive">{uploadError}</p>
+          )}
+        </div>
+
         <div className="flex gap-3 pt-1">
-          <Button
-            type="submit"
-            disabled={pending}
-            className="h-11 flex-1"
-          >
-            {pending ? 'Saving...' : 'Save expense'}
+          <Button type="submit" disabled={submitting} className="h-11 flex-1">
+            {uploadStatus === 'uploading'
+              ? 'Uploading receipt…'
+              : isPending
+                ? 'Saving…'
+                : 'Save expense'}
           </Button>
           <Button variant="outline" asChild className="h-11">
             <Link href="/expenses">Cancel</Link>

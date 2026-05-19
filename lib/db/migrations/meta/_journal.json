@@ -15,6 +15,13 @@
       "when": 1779072607961,
       "tag": "0001_neat_silver_surfer",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779181646433,
+      "tag": "0002_familiar_gargoyle",
+      "breakpoints": true
     }
   ]
 }

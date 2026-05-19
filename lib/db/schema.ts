@@ -1,4 +1,4 @@
-import { boolean, date, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, date, integer, numeric, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
   id: text('id').primaryKey(),
@@ -59,6 +59,22 @@ export const categories = pgTable('categories', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 });
 
+export const receipts = pgTable('receipts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('userId')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  imagePath: text('imagePath').notNull(),
+  originalName: text('originalName').notNull(),
+  mimeType: text('mimeType').notNull(),
+  sizeBytes: integer('sizeBytes').notNull(),
+  status: text('status').notNull().default('pending'),
+  rawOcrText: text('rawOcrText'),
+  extractedDataJson: text('extractedDataJson'),
+  error: text('error'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+});
+
 export const expenses = pgTable('expenses', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: text('userId')
@@ -71,6 +87,7 @@ export const expenses = pgTable('expenses', {
   date: date('date').notNull(),
   note: text('note'),
   paymentMethod: text('paymentMethod').notNull(),
+  receiptId: uuid('receiptId').references(() => receipts.id, { onDelete: 'set null' }),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });

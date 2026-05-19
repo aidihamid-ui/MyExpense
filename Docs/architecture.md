@@ -791,3 +791,69 @@ Option 2: Server Component validates URL params and passes `initialFrom`, `initi
 
 **Revisit trigger:**
 If multiple pages need identical filter bars, extract the pattern into a shared component. If filter state becomes complex (many fields, nested conditions), consider a URL-param management library.
+
+---
+
+### ADR-023: Two-step upload pattern — separate `uploadReceiptAction` + `createExpenseAction`
+
+**Date:** 2026-05-19
+**Status:** Accepted
+**Phase:** Phase 4
+
+**Context:**
+Attaching a receipt to a new expense requires both a file upload and a DB row creation. These could be handled in one combined server action (receive the file + all expense fields, do everything in one call) or as two separate actions (upload first → get receiptId → pass to create).
+
+**Options considered:**
+
+1. **One combined server action** — Single `createExpenseWithReceiptAction` accepts both file and form fields. Simpler call site; one round-trip. But blends two concerns: binary file handling and expense CRUD. The form's `useActionState` would need to handle a much larger payload. Error recovery (e.g., upload succeeds but DB fails) is harder to communicate to the user.
+
+2. **Two separate actions: upload first, then create** — Client uploads the file, gets back a `receiptId`, then includes it in the regular `createExpenseAction` FormData. Concerns stay separated. Upload state and expense-save state are tracked independently. If upload fails, user sees the error before any expense row is written. Consistent with ADR-012 (server actions in `lib/actions/<feature>.ts`).
+
+**Decision:**
+Option 2: separate `uploadReceiptAction` in `lib/actions/receipts.ts` and `createExpenseAction` in `lib/actions/expenses.ts`. The form's `onSubmit` handler calls upload first (if file selected), gets the receiptId, appends it to FormData, then calls dispatch (createExpenseAction) via `startTransition`.
+
+**Reasoning:**
+- Separation of concerns: file handling and expense CRUD are independent concerns with different error paths
+- Upload state can be shown granularly to the user ("Uploading…" vs "Saving…")
+- `createExpenseAction` remains reusable without a file (e.g., future bulk import)
+- If upload fails, the user sees the error on the file field and can retry without losing form state
+
+**Trade-offs we accept:**
+- Two network round-trips on form submit (upload + create); acceptable at 6-user scale and for the clarity it provides
+- The `onSubmit` intercept pattern bypasses native form progressive enhancement — acceptable since JS is required anyway
+- A receiptId can be appended to FormData manually by a malicious client, but the receipts table enforces `userId` ownership on the row, so cross-user injection is not possible
+
+**Revisit trigger:**
+If Phase 5 (OCR pipeline) needs to change this flow (e.g., upload + queue OCR atomically), revisit combining upload into the expense create or making the OCR queue step happen server-side after create.
+
+---
+
+### ADR-024: EXIF stripping via sharp default (no `.withMetadata()` call)
+
+**Date:** 2026-05-19
+**Status:** Accepted
+**Phase:** Phase 4
+
+**Context:**
+Receipt images may contain EXIF metadata including GPS coordinates (location leak risk). The session prompt specified "sharp with `.withMetadata(false)`". However, in sharp ≥0.29, `.withMetadata()` (called without arguments or with an options object) **keeps** metadata; the method has no `false` parameter in its TypeScript type signature. Sharp strips all metadata **by default** when `.withMetadata()` is not called.
+
+**Options considered:**
+
+1. **`.withMetadata(false)`** — Not a valid sharp API call. Would be a TypeScript error in strict mode. Prompt specified this but it does not exist in sharp ≥0.29.
+
+2. **`.withMetadata({})`** — Explicitly keeps metadata (opposite of intent).
+
+3. **No `.withMetadata()` call (sharp default)** — Sharp strips all metadata by default when the method is omitted. This is the correct way to strip EXIF in modern sharp.
+
+**Decision:**
+Option 3: call `sharp(buf).toBuffer()` with no `.withMetadata()`. A comment in the code documents that this strips EXIF by default.
+
+**Reasoning:**
+Sharp's documented default behavior is metadata stripping. The prompt's intent (strip EXIF) is achieved. Adding a non-existent `.withMetadata(false)` call would break the TypeScript build.
+
+**Trade-offs we accept:**
+- Sharp may change its default in a future major version; if it ever starts preserving metadata by default, EXIF stripping would silently stop working
+- PDFs bypass the sharp step entirely — PDF metadata is not stripped (acceptable: PDFs are less likely to contain GPS coordinates than camera images)
+
+**Revisit trigger:**
+On any major sharp version upgrade, verify that metadata is still stripped by default. If sharp ever adds a dedicated `.stripMetadata()` or equivalent, switch to that for clarity.
