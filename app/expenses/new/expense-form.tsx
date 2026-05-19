@@ -65,12 +65,12 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
           <label htmlFor="categoryId" className="mb-1.5 block text-sm font-medium">
             Category
           </label>
-          <Select name="categoryId" defaultValue="">
+          <Select name="categoryId" defaultValue="none">
             <SelectTrigger id="categoryId" className="h-11 w-full">
               <SelectValue placeholder="— None —" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">— None —</SelectItem>
+              <SelectItem value="none">— None —</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>
                   {cat.name}

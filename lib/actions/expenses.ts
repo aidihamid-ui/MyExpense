@@ -27,9 +27,10 @@ export async function createExpenseAction(
     redirect('/login');
   }
 
+  const rawCategoryId = formData.get('categoryId') as string;
   const raw = {
     amount: parseFloat(formData.get('amount') as string),
-    categoryId: (formData.get('categoryId') as string) || null,
+    categoryId: !rawCategoryId || rawCategoryId === 'none' ? null : rawCategoryId,
     date: formData.get('date') as string,
     note: (formData.get('note') as string) || undefined,
     paymentMethod: formData.get('paymentMethod') as string,
@@ -67,9 +68,10 @@ export async function updateExpenseAction(
   const expenseId = formData.get('expenseId') as string;
   if (!expenseId) return { message: 'Invalid request.' };
 
+  const rawCategoryId = formData.get('categoryId') as string;
   const raw = {
     amount: parseFloat(formData.get('amount') as string),
-    categoryId: (formData.get('categoryId') as string) || null,
+    categoryId: !rawCategoryId || rawCategoryId === 'none' ? null : rawCategoryId,
     date: formData.get('date') as string,
     note: (formData.get('note') as string) || undefined,
     paymentMethod: formData.get('paymentMethod') as string,

@@ -38,18 +38,18 @@ export default function FilterBar({
   const router = useRouter();
   const [from, setFrom] = useState(initialFrom);
   const [to, setTo] = useState(initialTo);
-  const [categoryId, setCategoryId] = useState(initialCategoryId);
+  const [categoryId, setCategoryId] = useState(initialCategoryId || 'all');
 
   function apply() {
     const params = new URLSearchParams({ from, to });
-    if (categoryId) params.set('categoryId', categoryId);
+    if (categoryId !== 'all') params.set('categoryId', categoryId);
     router.push(`/dashboard?${params.toString()}`);
   }
 
   function reset() {
     setFrom(defaultFrom);
     setTo(defaultTo);
-    setCategoryId('');
+    setCategoryId('all');
     router.push('/dashboard');
   }
 
@@ -82,7 +82,7 @@ export default function FilterBar({
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All categories</SelectItem>
+              <SelectItem value="all">All categories</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>
                   {cat.name}
