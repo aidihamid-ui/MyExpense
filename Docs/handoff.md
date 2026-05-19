@@ -136,8 +136,27 @@ _Security (verified):_
 ### Last known-good git state
 
 - Branch: master
-- Last tag: `v0.3-dashboard-done`
-- Last commit: see `git log --oneline -3`
+- Last tag: `v0.4-uploads-done`
+- Last commit: `565aced` — [Phase 4] docs: mark VPS deploy done
+
+---
+
+## What Was Done — Phase 4 (this session)
+
+- `receipts` table + `expenses.receiptId` schema; migration 0002 generated and applied locally + on VPS
+- `uploadReceiptAction` in `lib/actions/receipts.ts` — full validation pipeline (session, size, MIME, magic bytes, EXIF strip via sharp, UUID filename, DB insert)
+- `getReceiptById` + `createReceipt` added to `lib/db/queries.ts`; `getExpenses` updated to include `receiptId`
+- `GET /api/receipts/[id]` route — auth, ownership (404), path traversal guard, Blob stream, `Cache-Control: private, no-store`
+- `STORAGE_PATH: z.string().min(1)` in `lib/env.ts`; `ENV STORAGE_PATH=/tmp/receipts` in Dockerfile builder
+- Expense form updated: optional file input, two-step submit, upload state UI
+- Expenses list: Receipt link on desktop table and mobile cards
+- `sharp@^0.34.5` added
+- ADR-023 (two-step upload), ADR-024 (sharp EXIF default); integration-map §14–16
+- Tagged `v0.4-uploads-done`, pushed to GitHub
+- Deployed to VPS — `STORAGE_PATH` added to `.env`, `/var/lib/myexpense/receipts` created, `make deploy` + `make migrate` run, HTTP/2 200 verified
+
+### VPS deploy note
+`make migrate` exits silently when nothing to apply — this is normal, not an error. Migration 0002 was confirmed applied via `drizzle.__drizzle_migrations` (3 rows) and `\dt` (receipts table present).
 
 ---
 
