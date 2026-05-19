@@ -642,3 +642,152 @@ For optional category selects, `<SelectItem value="">— None —</SelectItem>` 
 
 **Revisit trigger:**
 If Radix changes the hidden-input mechanism, or if a future form requires a multi-select (Radix Select is single-value only — would need a different component).
+
+---
+
+### ADR-019: URL search param validation — Zod `safeParse` with silent fallback
+
+**Date:** 2026-05-19
+**Status:** Accepted
+**Phase:** Phase 3
+
+**Context:**
+The dashboard page accepts `?from=`, `?to=`, `?categoryId=` URL search params. Invalid or missing params must not throw — the page must always render using safe defaults. Need a consistent validation pattern for all future filterable pages.
+
+**Options considered:**
+
+1. **Manual null/type checks** — `typeof rawParams.from === 'string' && /^\d{4}.../.test(rawParams.from)`. Works but verbose, no schema documentation.
+2. **Zod `parse()` and catch** — Throws on invalid input; requires try/catch and duplicates the fallback logic.
+3. **Zod `safeParse()` with explicit fallback** — `parsed.success ? parsed.data : {}`. Never throws. Schema documents expected shape. Unknown/invalid params are silently ignored and replaced with defaults.
+
+**Decision:**
+Option 3: `z.object({...}).safeParse(rawParams)` in the Server Component; fall back to computed defaults when `!parsed.success`.
+
+**Reasoning:**
+- Server Components must never throw on bad URL input — that would be a 500 on a user-controlled input
+- `safeParse` makes the "invalid = use defaults" contract explicit
+- The Zod schema documents the accepted shape for future maintainers
+- Consistent with project-wide Zod-first validation (Rule 3 in CLAUDE.md)
+
+**Canonical pattern:**
+```ts
+const paramSchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  to:   z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  categoryId: z.string().uuid().optional(),
+});
+const parsed = paramSchema.safeParse(rawParams);
+const validParams = parsed.success ? parsed.data : {};
+const fromStr = validParams.from ?? defaultFrom;
+```
+
+**Trade-offs we accept:**
+- Invalid params produce no error message to the user (intentional — URL tampering should be silent)
+- The schema must be kept in sync with the filter bar's actual output params
+
+**Revisit trigger:**
+If a future page needs to surface an error for invalid params (e.g., a date that is logically impossible), switch to `parse()` + caught error → rendered error state.
+
+---
+
+### ADR-020: Malaysia UTC+8 timezone handling for calendar queries
+
+**Date:** 2026-05-19
+**Status:** Accepted
+**Phase:** Phase 3
+
+**Context:**
+Postgres stores timestamps in UTC. The `date` column is a Postgres `DATE` type (no time zone). Users are in Malaysia (UTC+8). "Current month" must mean the Malaysia-local calendar month, not the UTC calendar month. The month boundary can differ by up to 8 hours.
+
+**Options considered:**
+
+1. **Derive current date inside the SQL query** (`CURRENT_DATE AT TIME ZONE 'Asia/Kuala_Lumpur'`) — No `now` param needed. But hardcodes timezone in SQL, harder to test, and CLAUDE.md prompt explicitly says "Do not derive the current date inside the query."
+2. **Pass `now: Date` (UTC) to the query function; compute MYT boundaries in TypeScript** — Caller controls time (testable), TypeScript math is straightforward: `new Date(now.getTime() + 8 * 60 * 60 * 1000)` to get MYT, then extract year/month/day via `getUTCFullYear/Month/Date` on the shifted value.
+3. **Store the MYT date string at write time** — Add an `dateMYT` column computed at insert. Avoids runtime math but requires schema change and migration.
+
+**Decision:**
+Option 2: caller passes `now: Date`; query function computes MYT-adjusted boundaries in TypeScript.
+
+**Reasoning:**
+- Explicitly instructed by the session prompt ("Do not derive the current date inside the query; the server must compute date boundaries")
+- Testable: tests can inject any `now` value to simulate different MYT dates
+- No schema change required (the `date` column already stores YYYY-MM-DD entered by the user, which is already MYT-local)
+- Math is deterministic and auditable
+
+**Canonical pattern (from `getDashboardSummary`):**
+```ts
+const MYT_OFFSET_MS = 8 * 60 * 60 * 1000;
+const nowMYT = new Date(now.getTime() + MYT_OFFSET_MS);
+const year = nowMYT.getUTCFullYear();
+const month = nowMYT.getUTCMonth(); // 0-indexed
+// Month start: "2026-05-01"
+// Month end (exclusive): "2026-06-01" — use lt(), not lte()
+```
+
+**Trade-offs we accept:**
+- Every time-sensitive query function must accept `now: Date` as a parameter — callers must not call `new Date()` inside the query function
+- The 8-hour offset is hardcoded. If the app ever supports users outside Malaysia, the offset must become a per-user setting
+- Rolling "last 30 days" is computed as `now - 30 * 24 * 60 * 60 * 1000` in MYT — does not adjust for DST (Malaysia has no DST, so this is correct)
+
+**Revisit trigger:**
+If the app supports users in multiple timezones, or if Malaysia ever changes its UTC offset.
+
+---
+
+### ADR-021: Controlled Radix Select (no `name` prop) for URL-param navigation
+
+**Date:** 2026-05-19
+**Status:** Accepted
+**Phase:** Phase 3
+
+**Context:**
+ADR-018 established the pattern for Radix Select in forms that submit via `FormData` (server actions): use the `name` prop so Radix renders a hidden input. The dashboard filter bar is a different case: it uses `router.push()` to update URL params, not a form submission. No `FormData` is involved.
+
+**Decision:**
+Use controlled Radix Select (`value` + `onValueChange`, no `name` prop`) for any dropdown whose value is applied via `router.push()` rather than form submission.
+
+**How it differs from ADR-018:**
+
+| Context | Pattern |
+|---|---|
+| Server action form (FormData) | `<Select name="field">` — hidden input for FormData |
+| URL-param navigation | `<Select value={state} onValueChange={setState}>` — controlled, no `name` |
+
+**Trade-offs we accept:**
+- Two valid Select patterns now exist in the codebase. The distinction (form vs navigation) must be remembered when adding future selects.
+
+**Revisit trigger:**
+If a filter bar ever needs to submit via a form action instead of router.push, switch to the ADR-018 pattern.
+
+---
+
+### ADR-022: Dashboard filter as Client Component with server-prop initialization
+
+**Date:** 2026-05-19
+**Status:** Accepted
+**Phase:** Phase 3
+
+**Context:**
+The dashboard filter bar needs interactive date/category inputs that update URL params and trigger a server re-fetch. Two architectural options for connecting the server state (current URL params) to the client inputs.
+
+**Options considered:**
+
+1. **Pure URL-driven inputs (no local state)** — Inputs read value from URL params only, have no local state. Each keystroke triggers a `router.push()`. Causes excessive navigations while typing.
+2. **Client Component with `useState` initialized from server props** — Server Component reads URL params, validates them, and passes them as props to a `'use client'` child. Client holds local `useState` for the in-progress form values. Only triggers `router.push()` on explicit Apply/Reset click.
+3. **Dedicated search params hook (`useSearchParams`)** — Client reads URL params directly. Loses server-side Zod validation and makes the component harder to test in isolation.
+
+**Decision:**
+Option 2: Server Component validates URL params and passes `initialFrom`, `initialTo`, `initialCategoryId`, `defaultFrom`, `defaultTo` as props to `<FilterBar>`. FilterBar holds local controlled state, applies on button click.
+
+**Reasoning:**
+- All validation lives in the Server Component (consistent with ADR-019)
+- Filter bar only navigates on explicit user action (Apply/Reset) — no spurious re-renders
+- Component is fully testable with props alone (no URL dependency inside the component)
+- Clear data flow: URL → Server → props → local state → router.push → URL
+
+**Trade-offs we accept:**
+- `initialX` props become stale if the URL changes without a full re-render (acceptable — Apply/Reset always navigates to the new URL, so the server re-renders with fresh props)
+- The filter bar must receive `defaultFrom`/`defaultTo` from the server so Reset uses the same MYT-computed defaults
+
+**Revisit trigger:**
+If multiple pages need identical filter bars, extract the pattern into a shared component. If filter state becomes complex (many fields, nested conditions), consider a URL-param management library.

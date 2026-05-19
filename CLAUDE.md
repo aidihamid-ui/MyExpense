@@ -49,6 +49,7 @@ Read these as needed for the current task:
 | `docs/git-workflow.md` | Branches, commits, tags, recovery, git identity setup | When working with git or recovering from a mistake |
 | `docs/master-prompts.md` | Reusable prompts (security review, deploy, etc.) | When user invokes one |
 | `docs/architecture.md` | Architectural decision records (ADRs) | When making/reviewing a structural choice |
+| `docs/integration-map.md` | Integration point reference card (auth, DB, actions, env, Nav, migrations, etc.) | Start of every new phase |
 | `docs/security-log.md` | Security findings and fixes | After security reviews |
 | `docs/deployment.md` | VPS runbook (created at Phase 1.5) | Before any prod deploy |
 

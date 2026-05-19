@@ -1,8 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { authClient } from '@/lib/auth/client';
 
 const links = [
   { href: '/dashboard', label: 'Dashboard' },
@@ -11,13 +13,17 @@ const links = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await authClient.signOut();
+    router.push('/login');
+  }
 
   return (
     <nav className="border-b bg-white shadow-sm">
       <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2">
-        <span className="text-base font-bold text-primary tracking-tight">
-          MyExpense
-        </span>
+        <span className="text-base font-bold text-primary tracking-tight">MyExpense</span>
         <Separator orientation="vertical" className="h-5" />
         <div className="flex gap-1">
           {links.map(({ href, label }) => (
@@ -33,6 +39,11 @@ export default function Nav() {
               {label}
             </Link>
           ))}
+        </div>
+        <div className="ml-auto">
+          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+            Sign out
+          </Button>
         </div>
       </div>
     </nav>
