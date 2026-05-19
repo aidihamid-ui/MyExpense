@@ -109,10 +109,12 @@ _Security (verified):_
 
 ### Phase 3 Test Checklist Status
 
-Tests listed in `docs/phases.md`:
-- [ ] Numbers add up exactly to expense list totals — **run manually with test accounts**
-- [ ] Date filters work across a month boundary — **run manually**
-- [ ] Two accounts: each sees only their own numbers — **run manually** (enforced at query layer; `getCategoryBreakdown`, `getFilteredExpenseSummary`, `getDashboardSummary` all filter strictly by userId)
+Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
+- [x] Numbers add up exactly to expense list totals
+- [x] Date filters work across a month boundary
+- [x] Two accounts: each sees only their own numbers
+
+**Post-commit bug fixed:** Newer Radix Select forbids `value=""` on `<SelectItem>` — crashed the page on load. Fixed across all 3 affected forms (filter-bar, expense-form, edit-expense-form) and server action. Sentinels: `"all"` (category filter) and `"none"` (category on expense forms). This was a pre-existing regression from the shadcn/ui restyle, also hit by the new filter-bar.
 
 ---
 
