@@ -857,3 +857,39 @@ Sharp's documented default behavior is metadata stripping. The prompt's intent (
 
 **Revisit trigger:**
 On any major sharp version upgrade, verify that metadata is still stripped by default. If sharp ever adds a dedicated `.stripMetadata()` or equivalent, switch to that for clarity.
+
+---
+
+### ADR-025: OCR service binds 0.0.0.0 inside container — no host port published
+
+**Date:** 2026-05-20
+**Status:** Accepted
+**Phase:** Phase 5a
+
+**Context:**
+The Python FastAPI OCR service needs to be reachable by the Next.js `app` container but must not be reachable from the internet. CLAUDE.md Rule 8 previously said the OCR service "binds to `127.0.0.1` only" — that applies to the local dev setup where Python runs directly on the host. In Docker, `127.0.0.1` inside a container is the container's own loopback; binding to it makes the service unreachable from other containers.
+
+**Options considered:**
+
+1. **Bind to `127.0.0.1` inside container + publish port to host** — Keeps the bind address tight but publishes the port to the host network, making it reachable from the internet if a firewall rule is missing.
+2. **Bind to `0.0.0.0` inside container + no `ports:` in compose** — Service listens on all interfaces inside the container's private bridge network. Not published to the host. Reachable only by containers on the same Docker bridge (i.e., `app`). Internet-unreachable.
+3. **Bind to `0.0.0.0` + shared Docker network** — Same as option 2 but with an explicit named network. Unnecessary complexity when both services are in the same compose file and share the default bridge automatically.
+
+**Decision:**
+Option 2: bind `0.0.0.0:8001` inside the container, no `ports:` in `docker-compose.yml`.
+
+**Reasoning:**
+Docker's default bridge network isolates containers from the host by default. Without `ports:`, port 8001 is only reachable by containers in the same compose project — in our case, only `app`. The bind address inside the container (`0.0.0.0`) is irrelevant to internet exposure; that is controlled entirely by whether `ports:` is declared. This is the same pattern used for the `db` service (Postgres binds to all interfaces inside its container, no `ports:` declared, unreachable from outside).
+
+**How `app` reaches the OCR service:**
+`http://ocr-service:8001` — Docker's internal DNS resolves `ocr-service` to the container's bridge IP.
+
+**CLAUDE.md Rule 8 update:**
+Rule 8 ("OCR service: Python FastAPI binds to `127.0.0.1` only") applies to local dev (host process). In Docker, the correct form is: "no `ports:` published; bind address inside container is `0.0.0.0`." The security property is identical — internet-unreachable — achieved by different means.
+
+**Trade-offs we accept:**
+- Any future service added to the same compose project can reach `ocr-service:8001`. The `X-OCR-Secret` header provides defense-in-depth for this.
+- If a port is accidentally published in a future `docker-compose.override.yml`, the OCR service becomes internet-reachable — mitigated by the secret header but worth noting.
+
+**Revisit trigger:**
+If we split services across multiple compose files or hosts and need explicit network declarations.

@@ -1,5 +1,17 @@
 services:
 
+  ocr-service:
+    build:
+      context: ./ocr-service
+    restart: unless-stopped
+    environment:
+      STORAGE_PATH: ${STORAGE_PATH}
+      OCR_SECRET:   ${OCR_SECRET}
+    volumes:
+      - ${STORAGE_PATH}:${STORAGE_PATH}:ro
+      - paddleocr_cache:/root/.paddleocr
+    # No ports: — not published to host; only app can reach it via http://ocr-service:8001
+
   app:
     build:
       context: .
@@ -10,6 +22,8 @@ services:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL:    ${BETTER_AUTH_URL}
       STORAGE_PATH:       ${STORAGE_PATH}
+      OCR_SECRET:         ${OCR_SECRET}
+      OCR_PROVIDER:       ${OCR_PROVIDER:-paddle}
       NODE_ENV:           production
       NEXT_TELEMETRY_DISABLED: "1"
     volumes:
@@ -17,6 +31,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      ocr-service:
+        condition: service_started
     # No ports: — Traefik (host mode) reaches this container via its bridge IP on port 3000.
     labels:
       - "traefik.enable=true"
@@ -57,3 +73,4 @@ services:
 
 volumes:
   db_data:
+  paddleocr_cache:

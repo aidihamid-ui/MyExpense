@@ -27,7 +27,7 @@ Pluggable `OcrProvider` interface (env var `OCR_PROVIDER=paddle|claude|openai`).
 5. **No secrets in client code.** Server-side only.
 6. **No `.env` files committed.** `.gitignore` blocks them.
 7. **File uploads:** Validate MIME + magic bytes + 5MB max. UUID filenames.
-8. **OCR service:** Python FastAPI binds to `127.0.0.1` only. Validate image paths stay within `STORAGE_PATH`.
+8. **OCR service:** Local dev — Python FastAPI binds to `127.0.0.1:8001`. Docker — binds `0.0.0.0:8001` inside its container with no `ports:` published (internet-unreachable; only `app` can reach it via `http://ocr-service:8001`). Always validate image paths stay within `STORAGE_PATH` using `os.path.realpath`. Auth via `X-OCR-Secret` header (ADR-025).
 9. **Authorization on mutations:** Verify ownership BEFORE mutating.
 10. **No `dangerouslySetInnerHTML`.**
 

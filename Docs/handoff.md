@@ -2,9 +2,9 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-05-19
+**Last updated:** 2026-05-20
 **Last session by:** Claude
-**Current phase:** Phase 4 COMPLETE. Receipt upload + serving live locally.
+**Current phase:** Phase 5a COMPLETE locally. OCR sidecar built; awaiting VPS verification.
 
 ---
 
@@ -113,12 +113,81 @@ _Security (verified):_
 **For startup commands and the full local env runbook, see `Docs/environment.md`.**
 **For VPS deploy and future deploys, see `Docs/deployment.md`.**
 
+### Phase 5a — COMPLETE locally (2026-05-20)
+
+_OCR sidecar (`ocr-service/`):_
+- `Dockerfile` — python:3.11-slim, apt deps for OpenCV/libGL, pip install, uvicorn CMD bound to `0.0.0.0:8001`
+- `requirements.txt` — fastapi, uvicorn, paddlepaddle==2.6.2 (CPU), paddleocr==2.9.1, Pillow
+- `main.py` — env validation at startup (STORAGE_PATH + OCR_SECRET required, exit 1 if missing); PaddleOCR singleton loaded once in FastAPI lifespan; `/health` (no auth); `/ocr` POST (X-OCR-Secret header auth + `os.path.realpath` path traversal guard)
+
+_docker-compose.yml changes:_
+- `ocr-service` service added: no `ports:`, STORAGE_PATH mounted `:ro`, `paddleocr_cache` named volume at `/root/.paddleocr`
+- `app.depends_on` extended to include `ocr-service: condition: service_started`
+- `app` env: `OCR_SECRET`, `OCR_PROVIDER` (default: `paddle`) added
+- `paddleocr_cache` named volume added
+
+_Docs:_
+- `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
+
+**CRITICAL for Phase 5b:** Before implementing the `OcrProvider` interface, the OCR service must be verified live on VPS (see VPS steps below). PaddleOCR takes ~5 s to start and ~500 MB RAM. Check `docker stats --no-stream` after deploy — stop if total RAM >1.7 GB on the 2 GB VPS.
+
 ### What's broken or incomplete
 
-- PaddleOCR not installed (deferred to Phase 5; needs Python 3.11)
+- Phase 5a **not yet verified on VPS** — run VPS steps below before starting 5b
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
-- Phase 4 **deployed and verified on VPS** ✓ (2026-05-19)
 - `app/dashboard/logout-button.tsx` is now unused (Sign Out moved to Nav); can be deleted when convenient
+
+### VPS steps for Phase 5a verification
+
+SSH into VPS (hPanel browser terminal or `ssh root@187.77.155.88`):
+
+```bash
+cd /docker/myexpense/repo
+git pull
+
+# Add OCR_SECRET to .env — do before docker compose up
+echo "OCR_SECRET=$(openssl rand -hex 32)" >> /docker/myexpense/.env
+
+# Build OCR service first — catch errors early
+docker compose build ocr-service
+
+# If build OK:
+docker compose up -d
+docker stats --no-stream   # STOP if total >1.7 GB
+```
+
+Test from inside the app container:
+
+```bash
+docker compose exec app sh
+
+# Test 1 — health, no auth
+curl -s http://ocr-service:8001/health
+# expected: {"status":"ok"}
+
+# Test 2 — no secret → 401
+curl -s -X POST http://ocr-service:8001/ocr \
+  -H "Content-Type: application/json" \
+  -d '{"path":"/tmp/x"}'
+
+# Test 3 — wrong secret → 401
+curl -s -X POST http://ocr-service:8001/ocr \
+  -H "Content-Type: application/json" \
+  -H "X-OCR-Secret: wrong" \
+  -d '{"path":"/tmp/x"}'
+
+# Test 4 — path traversal → 400
+curl -s -X POST http://ocr-service:8001/ocr \
+  -H "Content-Type: application/json" \
+  -H "X-OCR-Secret: $OCR_SECRET" \
+  -d '{"path":"/etc/passwd"}'
+
+# Test 5 — path outside STORAGE_PATH → 400
+curl -s -X POST http://ocr-service:8001/ocr \
+  -H "Content-Type: application/json" \
+  -H "X-OCR-Secret: $OCR_SECRET" \
+  -d '{"path":"/tmp/notreceipts/x.jpg"}'
+```
 
 ### Phase 4 Test Checklist Status
 
@@ -138,6 +207,18 @@ _Security (verified):_
 - Branch: master
 - Last tag: `v0.4-uploads-done`
 - Last commit: `565aced` — [Phase 4] docs: mark VPS deploy done
+
+---
+
+## What Was Done — Phase 5a (2026-05-20)
+
+- `ocr-service/Dockerfile` — python:3.11-slim, apt OpenCV deps, pip install, uvicorn CMD on `0.0.0.0:8001`
+- `ocr-service/requirements.txt` — updated with paddlepaddle==2.6.2 (CPU), paddleocr==2.9.1, Pillow
+- `ocr-service/main.py` — env validation at startup (STORAGE_PATH + OCR_SECRET), PaddleOCR singleton in FastAPI lifespan, `/health`, `/ocr` with secret auth + path traversal guard
+- `docker-compose.yml` — ocr-service added (no ports, STORAGE_PATH :ro, paddleocr_cache volume); app.depends_on extended; OCR_SECRET + OCR_PROVIDER added to app env
+- `Docs/architecture.md` — ADR-025 appended
+- `Docs/handoff.md` — Phase 5a state, VPS verification steps, test checklist
+- `CLAUDE.md` — Rule 8 updated for Docker context (ADR-025)
 
 ---
 
@@ -200,25 +281,26 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ---
 
-## Next Up — Phase 5: OCR Pipeline
+## Next Up — Phase 5b: OcrProvider Interface
 
-Phase 4 is complete locally. Before starting Phase 5:
-1. Deploy Phase 4 to VPS: `make deploy` + `make migrate` (migration 0002 adds receipts table + expenses.receiptId)
-2. Verify live receipt upload at https://myexpense.srv1488589.hstgr.cloud
-3. Complete the manual browser test checklist (see Phase 4 Test Checklist Status above)
+Phase 5a (OCR sidecar) is complete locally. Before starting 5b:
+1. Run VPS steps above — verify OCR service starts and all 5 curl tests pass
+2. Check `docker stats --no-stream` — abort if RAM >1.7 GB
 
-Phase 5 sub-steps: Python FastAPI OCR service → OcrProvider interface → Postgres job queue + worker → receipt parser → review UI.
+Phase 5b: `lib/ocr/provider.ts` interface + `lib/ocr/paddle.ts` calling `http://ocr-service:8001/ocr`.
+Phase 5c: `ocr_jobs` table + worker polling every 5s.
+Phase 5d: receipt parser (RM/Total/Jumlah regex).
+Phase 5e: review UI with polling status.
 
 ---
 
 ## Open Questions / Blockers
 
 - [x] Deploy Phase 3 to VPS — done 2026-05-19 ✓
-- [x] Run Phase 3 test checklist — all passed ✓
-- [x] Phase 4 complete locally ✓
-- [x] Deploy Phase 4 to VPS — done 2026-05-19 ✓
+- [x] Phase 4 complete locally and on VPS ✓ (2026-05-19)
+- [x] Phase 5a complete locally ✓ (2026-05-20)
+- [ ] **BLOCKER: Deploy Phase 5a to VPS and verify** (see VPS steps above)
 - [ ] Manual browser test checklist for Phase 4 (5 formats, .exe rejection, 10MB rejection)
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
-- [ ] PaddleOCR on Python 3.14: unknown. Needs Python 3.11 for Phase 5 (`py -3.11`)
 - [ ] ADR-013 revisit: 4 protected pages now — approaching the "5 pages" revisit trigger for route group layout
 - [ ] `app/dashboard/logout-button.tsx` is now unused — can delete
