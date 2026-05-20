@@ -16,9 +16,11 @@ Internet → Traefik (:443, host mode, Let's Encrypt)
            app container (Next.js, port 3000, bridge IP)
                ↓  hostname "db", port 5432 (bridge only)
            db container (Postgres 17, never exposed to host)
+               ↓  hostname "ocr-service", port 8001 (bridge only)
+           ocr-service container (Python FastAPI + PaddleOCR, never exposed to host)
 ```
 
-No shared Traefik network needed. Traefik in host mode reaches the app container's bridge IP directly via the Docker provider. Postgres is never published to the host.
+No shared Traefik network needed. Traefik in host mode reaches the app container's bridge IP directly via the Docker provider. Postgres and ocr-service are never published to the host. OCR service binds `0.0.0.0:8001` inside its container but has no `ports:` mapping — internet-unreachable (ADR-025).
 
 ---
 
@@ -109,10 +111,15 @@ POSTGRES_PASSWORD=<strong-random-password>
 BETTER_AUTH_SECRET=<output-of-openssl-rand-base64-32>
 BETTER_AUTH_URL=https://myexpense.srv1488589.hstgr.cloud
 
-# Phase 4+ (leave these for now — required by lib/env.ts when OCR is wired up)
-# STORAGE_PATH=/var/lib/myexpense/receipts
-# OCR_PROVIDER=paddle
-# OCR_SECRET=<random>
+# Phase 4+ — receipt storage (required; STORAGE_PATH validated at boot by lib/env.ts)
+STORAGE_PATH=/var/lib/myexpense/receipts
+
+# Phase 5a+ — OCR service (required by ocr-service container; generate on VPS with openssl rand -hex 32)
+OCR_SECRET=<output-of-openssl-rand-hex-32>
+OCR_PROVIDER=paddle
+
+# Phase 5b+ — URL the Next.js app uses to reach the OCR service (MUST be http://ocr-service:8001 in Docker)
+# OCR_SERVICE_URL=http://ocr-service:8001
 ```
 
 Lock it down:
@@ -168,8 +175,12 @@ curl -I https://myexpense.srv1488589.hstgr.cloud
 | `POSTGRES_DB` | `myexpense` | Postgres DB name |
 | `POSTGRES_USER` | `myexpense` | Postgres role |
 | `POSTGRES_PASSWORD` | *(random)* | Strong password, stored in password manager |
-| `BETTER_AUTH_SECRET` | *(openssl output)* | Generated locally, never on VPS |
+| `BETTER_AUTH_SECRET` | *(openssl rand -base64 32)* | Generated locally, never on VPS |
 | `BETTER_AUTH_URL` | `https://myexpense.srv1488589.hstgr.cloud` | Exact URL, no trailing slash |
+| `STORAGE_PATH` | `/var/lib/myexpense/receipts` | Receipt file root; dir must exist and be writable by UID 1001 |
+| `OCR_SECRET` | *(openssl rand -hex 32)* | Shared secret between app and ocr-service; generate on VPS |
+| `OCR_PROVIDER` | `paddle` | Selects the OcrProvider impl (Phase 5b+) |
+| `OCR_SERVICE_URL` | `http://ocr-service:8001` | Must use service name, not localhost (ADR-025). Add in Phase 5b. |
 
 ---
 
@@ -255,6 +266,17 @@ gunzip -c /var/backups/myexpense/db-<timestamp>.sql.gz \
 
 **Build OOMs / killed**
 → VPS ran out of memory. Add swap (Pre-flight step 1) and retry.
+
+**`ocr-service` build fails or hangs on `pip install paddlepaddle`**
+→ paddlepaddle is a ~170 MB wheel with heavy C++ deps. If the build is killed mid-install, it's an OOM — verify swap is active (`free -h`).
+→ Retry with `docker compose build --no-cache ocr-service` to avoid stale cached layers.
+
+**`ocr-service` container exits immediately on first start**
+→ Most likely: `OCR_SECRET` or `STORAGE_PATH` missing from `.env` — the service calls `sys.exit(1)` if either is absent. Check `docker compose logs ocr-service`.
+→ Also possible: first-run model download (~500 MB to `/root/.paddleocr`) fails due to disk space. The `paddleocr_cache` named volume prevents re-download on restart once models are present.
+
+**`docker stats` shows ocr-service using >800 MB**
+→ Normal — PaddleOCR loads its models into memory at startup. Total VPS usage should stay under 1.7 GB with swap.
 
 **Database data lost after restart**
 → `db_data` Docker volume persists data. If volume was manually deleted, data is gone.

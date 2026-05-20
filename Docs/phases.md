@@ -175,7 +175,8 @@ The meaty phase. Build in 5 sub-steps.
 ### 5a. Python OCR service
 - FastAPI on `127.0.0.1:8001`
 - PaddleOCR loaded once at startup (~500MB, takes ~5s)
-- `POST /ocr` endpoint: accepts `{ "image_path": "..." }`, returns text + bounding boxes
+- `POST /ocr` endpoint: accepts `{ "path": "..." }`, returns text + lines
+  _(Note: spec originally said `image_path` — actual implementation uses `path`. See integration-map §17.)_
 - Validate path is inside the receipts dir (prevent traversal)
 - Accept shared secret header `X-OCR-Secret` for defense-in-depth
 

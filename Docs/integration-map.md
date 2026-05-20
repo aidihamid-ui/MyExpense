@@ -260,6 +260,52 @@ const userDir = path.join(env.STORAGE_PATH, userId);
 
 ---
 
+## 17. OCR service HTTP API (Phase 5a+)
+
+**Rule:** The OCR service is a Python FastAPI sidecar. It is NOT called directly by Next.js yet (that's Phase 5b). This section documents the API contract so Phase 5b integration has a single reference.
+
+**Base URL (Docker):** `http://ocr-service:8001` — internal Docker network only; never `http://localhost:8001` inside the app container (ADR-025).
+**Base URL (bare metal dev):** `http://127.0.0.1:8001`
+
+**File:** `ocr-service/main.py`
+
+### GET /health
+
+No auth. Returns `{"status":"ok"}` when the service is up and PaddleOCR is loaded.
+
+### POST /ocr
+
+Auth: `X-OCR-Secret: <OCR_SECRET>` header required. Returns 401 if missing or wrong.
+
+Request body:
+```json
+{ "path": "/var/lib/myexpense/receipts/<userId>/<uuid>.jpg" }
+```
+
+> **Field name is `path`, not `image_path`.** The original `phases.md` spec said `image_path` — the Pydantic model in `main.py` uses `path`. Phase 5b must use `path`.
+
+Path must be inside `STORAGE_PATH` (checked via `os.path.realpath` — symlink-safe). Returns 400 if path is outside. Returns 404 if file does not exist.
+
+Response (200):
+```json
+{
+  "text": "line1\nline2\n...",
+  "lines": ["line1", "line2", "..."]
+}
+```
+
+`text` is all OCR lines joined with `\n`. `lines` is the same data as an array (both provided for consumer convenience).
+
+**Error responses:**
+| Code | Cause |
+|---|---|
+| 401 | Missing or wrong `X-OCR-Secret` |
+| 400 | Path outside `STORAGE_PATH` |
+| 404 | File does not exist at path |
+| 500 | OCR engine failure |
+
+---
+
 ## 13. Select component pattern — two modes
 
 **Rule:** Radix Select has two valid patterns in this codebase (ADR-018, ADR-021):

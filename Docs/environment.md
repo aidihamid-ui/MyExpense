@@ -63,28 +63,47 @@ net start PostgreSQL
 
 ## OCR Service (Python FastAPI)
 
-**Start:**
+**Phase 5a+: two ways to run — Docker (preferred) or bare-metal venv**
+
+### Option A — Docker Compose (preferred, matches VPS)
+
+The `ocr-service` is part of `docker-compose.yml`. Run it alongside the app:
+
 ```bash
-cd ocr-service
-venv/Scripts/uvicorn main:app --host 127.0.0.1 --port 8001
+# From repo root — requires OCR_SECRET and STORAGE_PATH in .env.local
+docker compose up ocr-service -d
 ```
 
-With reload for active development:
+Uses the `paddleocr_cache` named volume so models (~500 MB) are not re-downloaded on restart.
+
+Note: port 8001 is NOT published to the host in Docker. Call via `http://ocr-service:8001` from within the compose network (ADR-025).
+
+### Option B — bare-metal venv (local dev without Docker)
+
 ```bash
-venv/Scripts/uvicorn main:app --host 127.0.0.1 --port 8001 --reload
+cd ocr-service
+py -3.11 -m venv venv          # must be Python 3.11 — PaddleOCR requirement
+venv/Scripts/pip install -r requirements.txt
+```
+
+**Required env vars** (add to shell or `.env.local`):
+```bash
+export OCR_SECRET=any-local-dev-value
+export STORAGE_PATH=./var/receipts
+```
+
+**Start:**
+```bash
+venv/Scripts/uvicorn main:app --host 127.0.0.1 --port 8001
 ```
 
 **Verify:**
 ```bash
 curl http://127.0.0.1:8001/health
-# → "ok"
+# → {"status":"ok"}
 ```
 
-**Binding rule:** `127.0.0.1` only, never `0.0.0.0`. Enforced as Critical Rule #8 in `CLAUDE.md`.
-
-### Python version note
-
-The skeleton runs on whatever Python the venv was created with (currently 3.14). **PaddleOCR installation in Phase 5 requires Python 3.11** — use `py -3.11 -m venv venv` when creating the venv at that point. Don't reuse the 3.14 venv for PaddleOCR; create a fresh one.
+**Binding rule (bare metal):** `127.0.0.1` only, never `0.0.0.0`. Critical Rule #8 in `CLAUDE.md`. In Docker, the service binds `0.0.0.0` inside its container but the port is never published — security posture is equivalent (ADR-025).
 
 ---
 
@@ -134,7 +153,7 @@ A normal local session needs all three running. In order:
 Then verify all three respond:
 ```bash
 psql -U myexpense -d myexpense_dev -c "select 1;"               # → returns row
-curl http://127.0.0.1:8001/health                                # → "ok"
+curl http://127.0.0.1:8001/health                                # → {"status":"ok"}
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000   # → 200
 ```
 

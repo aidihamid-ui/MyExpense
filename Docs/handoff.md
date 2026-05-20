@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-20
 **Last session by:** Claude
-**Current phase:** Phase 5a COMPLETE locally. OCR sidecar built; awaiting VPS verification.
+**Current phase:** Phase 5a COMPLETE. OCR service deployed and verified on VPS.
 
 ---
 
@@ -113,7 +113,7 @@ _Security (verified):_
 **For startup commands and the full local env runbook, see `Docs/environment.md`.**
 **For VPS deploy and future deploys, see `Docs/deployment.md`.**
 
-### Phase 5a — COMPLETE locally (2026-05-20)
+### Phase 5a — COMPLETE on VPS (2026-05-20)
 
 _OCR sidecar (`ocr-service/`):_
 - `Dockerfile` — python:3.11-slim, apt deps for OpenCV/libGL, pip install, uvicorn CMD bound to `0.0.0.0:8001`
@@ -129,65 +129,26 @@ _docker-compose.yml changes:_
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
 
-**CRITICAL for Phase 5b:** Before implementing the `OcrProvider` interface, the OCR service must be verified live on VPS (see VPS steps below). PaddleOCR takes ~5 s to start and ~500 MB RAM. Check `docker stats --no-stream` after deploy — stop if total RAM >1.7 GB on the 2 GB VPS.
-
 ### What's broken or incomplete
 
-- Phase 5a **not yet verified on VPS** — run VPS steps below before starting 5b
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
 - `app/dashboard/logout-button.tsx` is now unused (Sign Out moved to Nav); can be deleted when convenient
 
-### VPS steps for Phase 5a verification
+### Phase 5a VPS verification — COMPLETE (2026-05-20)
 
-SSH into VPS (hPanel browser terminal or `ssh root@187.77.155.88`):
+All 5 tests passed via `docker compose exec app sh`:
 
-```bash
-cd /docker/myexpense/repo
-git pull
+| Test | Expected | Result |
+|---|---|---|
+| `GET /health` | `{"status":"ok"}` | ✓ |
+| `POST /ocr` no secret | 401 | ✓ |
+| `POST /ocr` wrong secret | 401 | ✓ |
+| `POST /ocr` path="/etc/passwd" | 400 | ✓ |
+| `POST /ocr` path outside STORAGE_PATH | 400 | ✓ |
 
-# Add OCR_SECRET to .env — do before docker compose up
-echo "OCR_SECRET=$(openssl rand -hex 32)" >> /docker/myexpense/.env
+**Field name correction for Phase 5b:** POST /ocr request body field is `"path"`, not `"image_path"`. `phases.md` spec had a typo. See integration-map §17.
 
-# Build OCR service first — catch errors early
-docker compose build ocr-service
-
-# If build OK:
-docker compose up -d
-docker stats --no-stream   # STOP if total >1.7 GB
-```
-
-Test from inside the app container:
-
-```bash
-docker compose exec app sh
-
-# Test 1 — health, no auth
-curl -s http://ocr-service:8001/health
-# expected: {"status":"ok"}
-
-# Test 2 — no secret → 401
-curl -s -X POST http://ocr-service:8001/ocr \
-  -H "Content-Type: application/json" \
-  -d '{"path":"/tmp/x"}'
-
-# Test 3 — wrong secret → 401
-curl -s -X POST http://ocr-service:8001/ocr \
-  -H "Content-Type: application/json" \
-  -H "X-OCR-Secret: wrong" \
-  -d '{"path":"/tmp/x"}'
-
-# Test 4 — path traversal → 400
-curl -s -X POST http://ocr-service:8001/ocr \
-  -H "Content-Type: application/json" \
-  -H "X-OCR-Secret: $OCR_SECRET" \
-  -d '{"path":"/etc/passwd"}'
-
-# Test 5 — path outside STORAGE_PATH → 400
-curl -s -X POST http://ocr-service:8001/ocr \
-  -H "Content-Type: application/json" \
-  -H "X-OCR-Secret: $OCR_SECRET" \
-  -d '{"path":"/tmp/notreceipts/x.jpg"}'
-```
+**Phase 5b critical flag:** `OCR_SERVICE_URL` must be `http://ocr-service:8001` — NOT `http://localhost:8001` (ADR-025).
 
 ### Phase 4 Test Checklist Status
 
@@ -283,11 +244,10 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ## Next Up — Phase 5b: OcrProvider Interface
 
-Phase 5a (OCR sidecar) is complete locally. Before starting 5b:
-1. Run VPS steps above — verify OCR service starts and all 5 curl tests pass
-2. Check `docker stats --no-stream` — abort if RAM >1.7 GB
+Phase 5a is complete and verified on VPS. Ready to start 5b.
 
-Phase 5b: `lib/ocr/provider.ts` interface + `lib/ocr/paddle.ts` calling `http://ocr-service:8001/ocr`.
+Phase 5b: `lib/ocr/provider.ts` interface + `lib/ocr/paddle.ts` calling `http://ocr-service:8001/ocr` (ADR-025).
+Remember: POST /ocr body field is `"path"` (not `"image_path"`) — see integration-map §17.
 Phase 5c: `ocr_jobs` table + worker polling every 5s.
 Phase 5d: receipt parser (RM/Total/Jumlah regex).
 Phase 5e: review UI with polling status.
@@ -299,7 +259,7 @@ Phase 5e: review UI with polling status.
 - [x] Deploy Phase 3 to VPS — done 2026-05-19 ✓
 - [x] Phase 4 complete locally and on VPS ✓ (2026-05-19)
 - [x] Phase 5a complete locally ✓ (2026-05-20)
-- [ ] **BLOCKER: Deploy Phase 5a to VPS and verify** (see VPS steps above)
+- [x] Phase 5a verified on VPS ✓ (2026-05-20) — all 5 tests passed
 - [ ] Manual browser test checklist for Phase 4 (5 formats, .exe rejection, 10MB rejection)
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] ADR-013 revisit: 4 protected pages now — approaching the "5 pages" revisit trigger for route group layout
