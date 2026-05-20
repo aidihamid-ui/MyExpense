@@ -9,8 +9,11 @@ services:
       DATABASE_URL:       ${DATABASE_URL}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       BETTER_AUTH_URL:    ${BETTER_AUTH_URL}
+      STORAGE_PATH:       ${STORAGE_PATH}
       NODE_ENV:           production
       NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - ${STORAGE_PATH}:${STORAGE_PATH}
     depends_on:
       db:
         condition: service_healthy
