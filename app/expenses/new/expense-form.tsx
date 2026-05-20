@@ -49,12 +49,25 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
     let receiptId = pendingReceiptId;
 
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadStatus('error');
+        setUploadError('File must be 5 MB or smaller.');
+        return;
+      }
+
       setUploadStatus('uploading');
       setUploadError(null);
 
-      const uploadData = new FormData();
-      uploadData.set('receipt', file);
-      const result = await uploadReceiptAction(uploadData);
+      let result: Awaited<ReturnType<typeof uploadReceiptAction>>;
+      try {
+        const uploadData = new FormData();
+        uploadData.set('receipt', file);
+        result = await uploadReceiptAction(uploadData);
+      } catch {
+        setUploadStatus('error');
+        setUploadError('Upload failed. Please try again.');
+        return;
+      }
 
       if (!result.ok) {
         setUploadStatus('error');
