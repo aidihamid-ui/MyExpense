@@ -306,6 +306,36 @@ Response (200):
 
 ---
 
+## 18. OcrProvider usage pattern (Phase 5b+)
+
+**Rule:** Never call the OCR HTTP service directly. Use the `OcrProvider` interface. The active provider is determined by `env.OCR_PROVIDER`. Import `PaddleOcrProvider` and instantiate it where needed (Phase 5c worker). Do not call `PaddleOcrProvider` from server actions or route handlers — OCR runs asynchronously via the worker.
+
+**Files:** `lib/ocr/provider.ts` (interface), `lib/ocr/paddle.ts` (implementation)
+
+**Interface:**
+```ts
+interface OcrResult { text: string; lines: string[] }
+interface OcrProvider { extractFromImage(imagePath: string): Promise<OcrResult> }
+```
+
+**Usage (Phase 5c worker):**
+```ts
+import { PaddleOcrProvider } from '@/lib/ocr/paddle';
+
+const ocr = new PaddleOcrProvider();
+const result = await ocr.extractFromImage('/var/lib/myexpense/receipts/<userId>/<uuid>.jpg');
+// result.text — full OCR text joined with \n
+// result.lines — array of OCR lines
+```
+
+**Error contract:**
+- `OCR_SERVICE_URL` not set → throws `'OCR_SERVICE_URL is not set'`
+- Network unreachable → throws `'OCR service unreachable: <cause>'`
+- Non-200 response → throws `'OCR service returned <status>'`
+- Retry logic is NOT in the provider — it belongs in the Phase 5c worker.
+
+---
+
 ## 13. Select component pattern — two modes
 
 **Rule:** Radix Select has two valid patterns in this codebase (ADR-018, ADR-021):

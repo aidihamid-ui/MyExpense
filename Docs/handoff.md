@@ -2,9 +2,9 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-05-20
+**Last updated:** 2026-05-22
 **Last session by:** Claude
-**Current phase:** Phase 5a COMPLETE. OCR service deployed and verified on VPS.
+**Current phase:** Phase 5b COMPLETE. OcrProvider interface + PaddleOcrProvider written.
 
 ---
 
@@ -112,6 +112,27 @@ _Security (verified):_
 
 **For startup commands and the full local env runbook, see `Docs/environment.md`.**
 **For VPS deploy and future deploys, see `Docs/deployment.md`.**
+
+### Phase 5b — COMPLETE (2026-05-22)
+
+_OcrProvider interface (`lib/ocr/provider.ts`):_
+- `OcrResult { text: string; lines: string[] }`
+- `OcrProvider { extractFromImage(imagePath: string): Promise<OcrResult> }`
+
+_PaddleOcrProvider (`lib/ocr/paddle.ts`):_
+- Reads `env.OCR_SERVICE_URL` and `env.OCR_SECRET`
+- `POST {OCR_SERVICE_URL}/ocr` with body `{ path: imagePath }` and `X-OCR-Secret` header
+- Non-200 response → `Error('OCR service returned <status>')`
+- Network failure → `Error('OCR service unreachable: ...')`
+- No retry logic (retries go in Phase 5c worker)
+
+_Env (`lib/env.ts`):_
+- `OCR_SERVICE_URL: z.url().optional()` added
+
+_Docs:_
+- `Docs/integration-map.md` — section 18 added (OcrProvider usage pattern)
+
+---
 
 ### Phase 5a — COMPLETE on VPS (2026-05-20)
 
@@ -242,13 +263,11 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ---
 
-## Next Up — Phase 5b: OcrProvider Interface
+## Next Up — Phase 5c: OCR Jobs Worker
 
-Phase 5a is complete and verified on VPS. Ready to start 5b.
+Phase 5b is complete. `OcrProvider` + `PaddleOcrProvider` are ready.
 
-Phase 5b: `lib/ocr/provider.ts` interface + `lib/ocr/paddle.ts` calling `http://ocr-service:8001/ocr` (ADR-025).
-Remember: POST /ocr body field is `"path"` (not `"image_path"`) — see integration-map §17.
-Phase 5c: `ocr_jobs` table + worker polling every 5s.
+Phase 5c: `ocr_jobs` table + worker polling every 5s — picks up `pending` receipts, calls `PaddleOcrProvider.extractFromImage`, updates status to `done` or `error`.
 Phase 5d: receipt parser (RM/Total/Jumlah regex).
 Phase 5e: review UI with polling status.
 
