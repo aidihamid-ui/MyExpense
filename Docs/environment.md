@@ -109,22 +109,20 @@ curl http://127.0.0.1:8001/health
 
 ## Database Scripts (Drizzle)
 
-The `db:generate`, `db:migrate`, `db:studio`, and `db:push` scripts in `package.json` all pass `--env-file=.env.local` to the drizzle-kit CLI:
+The `db:generate`, `db:migrate`, `db:studio`, and `db:push` scripts in `package.json` use Node's `--env-file` flag to load `.env.local`, then invoke drizzle-kit directly via its `bin.cjs` entry point:
 
 ```json
-"db:generate": "drizzle-kit generate --env-file=.env.local",
-"db:migrate":  "drizzle-kit migrate  --env-file=.env.local",
-"db:studio":   "drizzle-kit studio   --env-file=.env.local",
-"db:push":     "drizzle-kit push     --env-file=.env.local"
+"db:generate": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs generate",
+"db:migrate":  "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs migrate",
+"db:studio":   "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs studio",
+"db:push":     "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs push"
 ```
 
-**Why this is needed:** drizzle-kit doesn't auto-load `.env.local` the way Next.js does. Without `--env-file`, the CLI can't see `DATABASE_URL` and fails with cryptic "missing connection string" errors. The flag tells drizzle-kit to read the file explicitly.
+**Why `bin.cjs` instead of the normal shim:** On this machine (Windows, Node v24), the `node_modules/.bin/drizzle-kit` file is a bash shim. When invoked as `node ... ./node_modules/.bin/drizzle-kit`, Node tries to execute the bash script as JavaScript and throws a syntax error. Using `node_modules/drizzle-kit/bin.cjs` calls the actual CJS entry point directly, bypassing the shim entirely.
 
-**If you ever see "missing DATABASE_URL" from a `db:*` script:** the flag was probably dropped. Re-add it.
+**Why `--env-file=.env.local`:** drizzle-kit doesn't auto-load `.env.local` the way Next.js does. Without it, the CLI can't see `DATABASE_URL` and fails with a cryptic "missing connection string" error. This is a Node built-in flag (Node v20.6+) — no extra package needed.
 
-**Why not just use `dotenv-cli`:** `--env-file` is a drizzle-kit-native flag that scopes the load to one process. Cleaner than wrapping the command.
-
-On the VPS (Phase 1.5+), production uses `.env` (not `.env.local`), and migrations run differently. See `docs/deployment.md` once that file exists.
+On the VPS, migrations run via `make migrate` (see `docs/deployment.md`) which uses the Docker `migrate` service — these scripts are local-dev only.
 
 ---
 
@@ -173,7 +171,10 @@ Leftover uvicorn process. Windows: `netstat -ano | findstr :8001` → `taskkill 
 `.env.local` is missing a variable. Diff against `.env.example`; the Zod schema in `lib/env.ts` is the source of truth for what's required.
 
 **`db:generate` / `db:migrate` fails with missing DATABASE_URL**
-The `--env-file=.env.local` flag was dropped from the script. See "Database Scripts" above.
+The `--env-file=.env.local` argument was dropped from the script. See "Database Scripts" above.
+
+**`db:generate` / `db:migrate` throws a JS SyntaxError on startup**
+Node is executing the bash shim as JavaScript. The scripts must use `node_modules/drizzle-kit/bin.cjs`, not `./node_modules/.bin/drizzle-kit`. See "Database Scripts" above.
 
 **Postgres started but `psql` says role does not exist**
 This is a fresh Postgres data dir. Recreate the role and DB:
