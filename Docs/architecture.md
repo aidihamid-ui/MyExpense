@@ -893,3 +893,62 @@ Rule 8 ("OCR service: Python FastAPI binds to `127.0.0.1` only") applies to loca
 
 **Revisit trigger:**
 If we split services across multiple compose files or hosts and need explicit network declarations.
+
+---
+
+### ADR-026: OcrProvider pluggable interface
+
+**Date:** 2026-05-22
+**Status:** Accepted
+**Phase:** Phase 5b
+
+**Context:**
+The OCR pipeline needs to call an external service. We could hard-code PaddleOCR calls everywhere, or abstract behind an interface so the provider can be swapped via env var without touching call sites.
+
+**Options considered:**
+
+1. **Direct calls to PaddleOCR HTTP API** — simpler to write, tightly coupled; every call site imports `paddle.ts` directly
+2. **`OcrProvider` interface + concrete class** — one extra layer; all call sites depend on the interface, not the implementation; env var selects the active provider at runtime
+
+**Decision:**
+Option 2: `OcrProvider` interface in `lib/ocr/provider.ts`, `PaddleOcrProvider` in `lib/ocr/paddle.ts`.
+
+**Reasoning:**
+The `OCR_PROVIDER` env var already exists (defaults to `'paddle'`). With only the interface at call sites, the worker (and any future caller) never needs to know which concrete provider is active. Swapping to Claude Vision or OpenAI for a higher-accuracy tier requires no changes outside `lib/ocr/`.
+
+**Trade-offs we accept:**
+- One extra file and indirection layer.
+- Factory / DI container not implemented — caller instantiates `new PaddleOcrProvider()` directly for now. A factory can be added in Phase 5e if needed.
+
+**Revisit trigger:**
+If a second concrete provider is actually built, add a factory function in `lib/ocr/index.ts` that reads `env.OCR_PROVIDER` and returns the right instance.
+
+---
+
+### ADR-027: `FOR UPDATE SKIP LOCKED` for OCR job claiming
+
+**Date:** 2026-05-22
+**Status:** Accepted
+**Phase:** Phase 5c
+
+**Context:**
+The worker polls `ocr_jobs` every 5 seconds. With a simple `SELECT ... LIMIT 1` + separate `UPDATE`, two concurrent worker instances could race and both claim the same job. We need an atomic claim strategy.
+
+**Options considered:**
+
+1. **`SELECT ... FOR UPDATE` (blocking)** — second worker waits for the first to release the lock; works but causes latency stacking under load
+2. **`SELECT ... FOR UPDATE SKIP LOCKED`** — second worker sees the locked row is unavailable and immediately moves on to the next eligible row (or returns nothing); no blocking
+3. **Optimistic locking (CAS on `status`)** — `UPDATE ... WHERE status='pending' ... RETURNING *`, then check if any row was updated; simpler SQL but not guaranteed to be atomic across concurrent transactions without proper isolation
+
+**Decision:**
+Option 2: `UPDATE ocr_jobs SET status='processing' WHERE id = (SELECT id ... FOR UPDATE SKIP LOCKED) RETURNING *`
+
+**Reasoning:**
+At 6 users the concurrency concern is academic, but correctness is not. `SKIP LOCKED` is the idiomatic Postgres pattern for polling queues: atomic claim, no blocking, scales to N workers trivially. The entire claim is a single statement so there is no window between SELECT and UPDATE.
+
+**Trade-offs we accept:**
+- Raw `sql` template required in the WHERE clause — Drizzle's query builder has no native `FOR UPDATE SKIP LOCKED` API.
+- If Postgres is unavailable, the entire tick throws; the worker catches and logs it.
+
+**Revisit trigger:**
+Never for this project — `SKIP LOCKED` is the right choice at any scale we will reach.
