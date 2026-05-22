@@ -12,7 +12,8 @@
     "db:migrate": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs migrate",
     "db:studio": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs studio",
     "db:push": "node --env-file=.env.local node_modules/drizzle-kit/bin.cjs push",
-    "worker": "tsx lib/worker.ts"
+    "worker": "tsx lib/worker.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "better-auth": "^1.6.11",
@@ -42,6 +43,7 @@
     "eslint-config-next": "^16.2.6",
     "tailwindcss": "^4",
     "tsx": "^4.22.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.7"
   }
 }
