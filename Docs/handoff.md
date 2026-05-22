@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-22
 **Last session by:** Claude
-**Current phase:** Phase 5b COMPLETE. OcrProvider interface + PaddleOcrProvider written.
+**Current phase:** Phase 5c COMPLETE. ocr_jobs table + polling worker.
 
 ---
 
@@ -112,6 +112,29 @@ _Security (verified):_
 
 **For startup commands and the full local env runbook, see `Docs/environment.md`.**
 **For VPS deploy and future deploys, see `Docs/deployment.md`.**
+
+### Phase 5c — COMPLETE (2026-05-22)
+
+_Schema (`lib/db/schema.ts`):_
+- `ocrJobs` table: id (uuid PK), receiptId (uuid FK→receipts cascade), status (pending|processing|done|failed), attempts (int, default 0), scheduledFor (timestamp, default now()), lastError (text nullable)
+
+_Queries (`lib/db/queries.ts`):_
+- `claimNextOcrJob()` — atomically claims one pending job (FOR UPDATE SKIP LOCKED), returns job row + imagePath or null
+- `markOcrJobDone(jobId, receiptId, ocrText)` — sets job done, receipt completed + rawOcrText
+- `markOcrJobFailed(jobId, receiptId, error, attempts)` — if attempts ≥ 3: permanent fail; else: reschedule +30s with attempts+1
+
+_Worker (`lib/worker.ts`):_
+- Polls every 5s via `setInterval`
+- Calls `PaddleOcrProvider.extractFromImage` on claimed jobs
+- Logs each event: claimed | done | failed
+- Graceful shutdown on SIGTERM/SIGINT
+
+_Migration:_
+- `lib/db/migrations/0003_misty_emma_frost.sql` — generated, **NOT applied yet** (apply in Phase 5e with `make migrate`)
+
+_Note:_ `npm run db:generate` script in package.json has a Windows shell issue (tries to run bash shim as Node). Use `node --env-file=.env.local node_modules/drizzle-kit/bin.cjs generate` directly.
+
+---
 
 ### Phase 5b — COMPLETE (2026-05-22)
 
@@ -263,13 +286,12 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ---
 
-## Next Up — Phase 5c: OCR Jobs Worker
+## Next Up — Phase 5d: Receipt Parser
 
-Phase 5b is complete. `OcrProvider` + `PaddleOcrProvider` are ready.
+Phase 5c is complete. `ocr_jobs` table + worker are ready.
 
-Phase 5c: `ocr_jobs` table + worker polling every 5s — picks up `pending` receipts, calls `PaddleOcrProvider.extractFromImage`, updates status to `done` or `error`.
-Phase 5d: receipt parser (RM/Total/Jumlah regex).
-Phase 5e: review UI with polling status.
+Phase 5d: receipt parser — regex extraction (RM/Total/Jumlah amounts) from `rawOcrText`, populate `receipts.extractedDataJson`.
+Phase 5e: review UI with polling status + wire worker into docker-compose, apply migration 0003 on VPS.
 
 ---
 

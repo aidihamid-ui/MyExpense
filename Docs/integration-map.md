@@ -336,6 +336,31 @@ const result = await ocr.extractFromImage('/var/lib/myexpense/receipts/<userId>/
 
 ---
 
+## 19. Worker job lifecycle (Phase 5c+)
+
+**Rule:** OCR jobs are created when a receipt upload completes (Phase 5e will add the insert). The worker polls every 5s, claims one job at a time, runs OCR, and updates both `ocr_jobs` and `receipts`. Never call these worker queries from server actions or route handlers.
+
+**Job status flow:**
+```
+pending → [claim] → processing → [success] → done
+                               → [fail, attempts<3] → pending (scheduledFor+30s, attempts+1)
+                               → [fail, attempts≥3] → failed
+```
+
+**Files:** `lib/worker.ts`, `lib/db/queries.ts` (worker section)
+
+**Claim query:** `claimNextOcrJob()` uses `FOR UPDATE SKIP LOCKED` — safe for concurrent workers (only one will ever claim a given job).
+
+**Run worker locally:**
+```bash
+node --env-file=.env.local node_modules/.bin/tsx lib/worker.ts
+# or: npm run worker  (requires DATABASE_URL etc. already in env)
+```
+
+**Migration:** `lib/db/migrations/0003_misty_emma_frost.sql` — must be applied before starting the worker.
+
+---
+
 ## 13. Select component pattern — two modes
 
 **Rule:** Radix Select has two valid patterns in this codebase (ADR-018, ADR-021):
