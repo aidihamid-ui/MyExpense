@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-22
 **Last session by:** Claude
-**Current phase:** Phase 5c COMPLETE. ocr_jobs table + polling worker.
+**Current phase:** Phase 5d COMPLETE. Receipt parser + unit tests.
 
 ---
 
@@ -113,6 +113,23 @@ _Security (verified):_
 **For startup commands and the full local env runbook, see `Docs/environment.md`.**
 **For VPS deploy and future deploys, see `Docs/deployment.md`.**
 
+### Phase 5d — COMPLETE (2026-05-22)
+
+_Parser (`lib/ocr/parser.ts`):_
+- `parseReceiptText(rawText): ParsedReceipt` — `{ total, date, merchant }`
+- **total**: keyword pattern (TOTAL/JUMLAH/AMAUN/AMOUNT/GRAND TOTAL) + RM fallback; takes largest value; strips commas
+- **date**: DD/MM/YYYY → YYYY-MM-DD; YYYY-MM-DD passthrough; validates month 1-12, day 1-31
+- **merchant**: first non-empty, non-digit, non-skip-prefix line (max 3 tries, capped 80 chars)
+
+_Tests (`lib/ocr/parser.test.ts`):_
+- 10 vitest tests, all passing — `npm run test`
+
+_Dependencies:_
+- `vitest@^4.1.7` added to devDependencies
+- `"test": "vitest run"` added to package.json scripts
+
+---
+
 ### Phase 5c — COMPLETE (2026-05-22)
 
 _Schema (`lib/db/schema.ts`):_
@@ -211,7 +228,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `819c5c9` — [Phase 5c] docs: update environment.md database scripts section
+- Last commit: `8c2373e` — [Phase 5d] feat: receipt parser with unit tests
 
 ---
 
@@ -286,12 +303,16 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ---
 
-## Next Up — Phase 5d: Receipt Parser
+## Next Up — Phase 5e: Wire it all together
 
-Phase 5c is complete. `ocr_jobs` table + worker are ready.
+Phase 5d is complete. Parser is done and tested.
 
-Phase 5d: receipt parser — regex extraction (RM/Total/Jumlah amounts) from `rawOcrText`, populate `receipts.extractedDataJson`.
-Phase 5e: review UI with polling status + wire worker into docker-compose, apply migration 0003 on VPS.
+Phase 5e (final sub-phase):
+- Wire `parseReceiptText` into the worker: after OCR success, parse + store `extractedDataJson` on receipts row
+- Apply migration 0003 locally and on VPS (`make migrate`)
+- Add worker to `docker-compose.yml`
+- Review UI: show OCR status + extracted data on receipt/expense detail
+- Make `OCR_SERVICE_URL` required in `lib/env.ts` (remove `.optional()`)
 
 ---
 
