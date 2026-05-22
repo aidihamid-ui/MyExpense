@@ -361,6 +361,34 @@ node --env-file=.env.local node_modules/.bin/tsx lib/worker.ts
 
 ---
 
+## 20. Receipt parser (Phase 5d+)
+
+**Rule:** Call `parseReceiptText(rawOcrText)` after OCR succeeds in the worker. Store the result as JSON in `receipts.extractedDataJson`. Never call the parser from server actions or route handlers — parsing is part of the async OCR pipeline.
+
+**File:** `lib/ocr/parser.ts`
+
+**Type:**
+```ts
+type ParsedReceipt = { total: number | null; date: string | null; merchant: string | null }
+```
+
+**Usage (Phase 5e worker integration):**
+```ts
+import { parseReceiptText } from '@/lib/ocr/parser';
+
+const parsed = parseReceiptText(ocrResult.text);
+// store: receipts.extractedDataJson = JSON.stringify(parsed)
+```
+
+**Parser behaviour (conservative — null over wrong guess):**
+- `total` — largest RM amount near a keyword (TOTAL/JUMLAH/AMAUN/AMOUNT/GRAND TOTAL); RM-only fallback; strips commas
+- `date` — DD/MM/YYYY → YYYY-MM-DD; YYYY-MM-DD passthrough; null if none
+- `merchant` — first non-digit, non-skip-prefix line (≤80 chars, max 3 tries); null if none
+
+**Tests:** `lib/ocr/parser.test.ts` — `npm run test`
+
+---
+
 ## 13. Select component pattern — two modes
 
 **Rule:** Radix Select has two valid patterns in this codebase (ADR-018, ADR-021):

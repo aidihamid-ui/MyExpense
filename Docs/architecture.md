@@ -952,3 +952,33 @@ At 6 users the concurrency concern is academic, but correctness is not. `SKIP LO
 
 **Revisit trigger:**
 Never for this project — `SKIP LOCKED` is the right choice at any scale we will reach.
+
+---
+
+### ADR-028: vitest as the unit test runner
+
+**Date:** 2026-05-22
+**Status:** Accepted
+**Phase:** Phase 5d
+
+**Context:**
+Phase 5d introduced the first unit-testable pure function (`parseReceiptText`). A test runner is needed. The project already uses Vite indirectly via Next.js tooling, and the codebase is TypeScript-first with ESM conventions.
+
+**Options considered:**
+
+1. **Jest** — dominant in the Node ecosystem; requires `ts-jest` or Babel transform; heavier config; slower on pure TS files
+2. **vitest** — Vite-native; zero-config TypeScript support via esbuild; same assertion API as Jest (`expect`, `describe`, `it`); fast (~4ms for 10 tests here)
+3. **Node built-in test runner** (`node:test`) — no install needed in Node v18+; less ergonomic API; fewer matchers
+
+**Decision:**
+vitest.
+
+**Reasoning:**
+Zero config for TypeScript was the deciding factor — `npm install -D vitest` and `vitest run` just worked without a config file, Babel setup, or transform declarations. The Jest-compatible API means no learning curve. At this project's scale (pure utility functions, no browser DOM) the performance difference is irrelevant, but vitest is meaningfully faster on cold starts.
+
+**Trade-offs we accept:**
+- Additional devDependency (~30 packages).
+- `vitest run` is a one-shot runner; watch mode (`vitest`) is a separate invocation if needed.
+
+**Revisit trigger:**
+If we ever need Jest-specific features (e.g. module mocking via `jest.mock`) — unlikely for this project's test surface.
