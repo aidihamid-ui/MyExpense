@@ -132,7 +132,7 @@ _Worker (`lib/worker.ts`):_
 _Migration:_
 - `lib/db/migrations/0003_misty_emma_frost.sql` — generated, **NOT applied yet** (apply in Phase 5e with `make migrate`)
 
-_Note:_ `npm run db:generate` script in package.json has a Windows shell issue (tries to run bash shim as Node). Use `node --env-file=.env.local node_modules/drizzle-kit/bin.cjs generate` directly.
+_Note:_ All `db:*` scripts now use `node_modules/drizzle-kit/bin.cjs` directly (fixed — see `Docs/environment.md` § Database Scripts).
 
 ---
 
@@ -211,7 +211,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `565aced` — [Phase 4] docs: mark VPS deploy done
+- Last commit: `819c5c9` — [Phase 5c] docs: update environment.md database scripts section
 
 ---
 
