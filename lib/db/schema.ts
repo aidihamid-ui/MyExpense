@@ -91,3 +91,14 @@ export const expenses = pgTable('expenses', {
   createdAt: timestamp('createdAt').notNull().defaultNow(),
   updatedAt: timestamp('updatedAt').notNull().defaultNow(),
 });
+
+export const ocrJobs = pgTable('ocr_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  receiptId: uuid('receiptId')
+    .notNull()
+    .references(() => receipts.id, { onDelete: 'cascade' }),
+  status: text('status').notNull().default('pending'),
+  attempts: integer('attempts').notNull().default(0),
+  scheduledFor: timestamp('scheduledFor').notNull().defaultNow(),
+  lastError: text('lastError'),
+});

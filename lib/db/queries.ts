@@ -5,8 +5,8 @@
  */
 
 import { db } from '@/lib/db';
-import { categories, expenses, receipts } from '@/lib/db/schema';
-import { and, count, desc, eq, gte, lt, lte, sum } from 'drizzle-orm';
+import { categories, expenses, ocrJobs, receipts } from '@/lib/db/schema';
+import { and, count, desc, eq, gte, lt, lte, sql, sum } from 'drizzle-orm';
 
 // ── Categories ──────────────────────────────────────────────────────────────
 
@@ -288,4 +288,82 @@ export async function getReceiptById(userId: string, receiptId: string) {
     .from(receipts)
     .where(and(eq(receipts.id, receiptId), eq(receipts.userId, userId)));
   return row ?? null;
+}
+
+// ── OCR Worker Queries ────────────────────────────────────────────────────────
+// These are system queries (no userId filter) — they operate on the job queue,
+// not on user-owned data directly.
+
+/**
+ * Atomically claims one pending OCR job where scheduledFor <= now() and
+ * attempts < 3. Sets status to 'processing'. Returns the job row and the
+ * receipt's imagePath, or null if no job is available.
+ * Uses FOR UPDATE SKIP LOCKED so concurrent workers never claim the same job.
+ */
+export async function claimNextOcrJob() {
+  const [job] = await db
+    .update(ocrJobs)
+    .set({ status: 'processing' })
+    .where(
+      sql`id = (
+        SELECT id FROM ocr_jobs
+        WHERE status = 'pending'
+          AND "scheduledFor" <= NOW()
+          AND attempts < 3
+        ORDER BY "scheduledFor"
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED
+      )`
+    )
+    .returning();
+
+  if (!job) return null;
+
+  const [receipt] = await db
+    .select({ imagePath: receipts.imagePath })
+    .from(receipts)
+    .where(eq(receipts.id, job.receiptId));
+
+  if (!receipt) return null;
+
+  return { ...job, imagePath: receipt.imagePath };
+}
+
+/** Sets the job to done and writes OCR text + status to the receipt row. */
+export async function markOcrJobDone(jobId: string, receiptId: string, ocrText: string) {
+  await Promise.all([
+    db.update(ocrJobs).set({ status: 'done' }).where(eq(ocrJobs.id, jobId)),
+    db
+      .update(receipts)
+      .set({ rawOcrText: ocrText, status: 'completed' })
+      .where(eq(receipts.id, receiptId)),
+  ]);
+}
+
+/**
+ * Marks the job failed. If attempts >= 3, the job and receipt are permanently
+ * failed. Otherwise, the job is rescheduled (status=pending) with a 30-second
+ * backoff and attempts incremented.
+ */
+export async function markOcrJobFailed(
+  jobId: string,
+  receiptId: string,
+  error: string,
+  attempts: number
+) {
+  if (attempts >= 3) {
+    await Promise.all([
+      db
+        .update(ocrJobs)
+        .set({ status: 'failed', lastError: error })
+        .where(eq(ocrJobs.id, jobId)),
+      db.update(receipts).set({ status: 'failed' }).where(eq(receipts.id, receiptId)),
+    ]);
+  } else {
+    const scheduledFor = new Date(Date.now() + 30_000);
+    await db
+      .update(ocrJobs)
+      .set({ status: 'pending', attempts: attempts + 1, scheduledFor, lastError: error })
+      .where(eq(ocrJobs.id, jobId));
+  }
 }
