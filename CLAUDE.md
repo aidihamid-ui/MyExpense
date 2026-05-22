@@ -42,13 +42,13 @@ Pluggable `OcrProvider` interface (env var `OCR_PROVIDER=paddle|claude|openai`).
 | `CLAUDE.md` (this) | Identity, critical rules, session protocol (auto-loaded) |
 | `Docs/handoff.md` | Current project state — what's working, what's next, open blockers |
 | `Docs/integration-map.md` | Integration reference card — auth, DB, actions, env, Nav, migrations, OCR |
+| `Docs/architecture.md` | All ADRs — required by Session Protocol START step 2 |
 
 **Read at the start of each phase and before declaring phase done:**
 
 | File | What's in it |
 |---|---|
 | `Docs/phases.md` | Phase-by-phase steps **and per-phase Test checklists** |
-| `Docs/architecture.md` | All ADRs — also required for Session Protocol START step 2 |
 
 **Read on demand:**
 
@@ -100,7 +100,7 @@ Full rules: `Docs/subagent-rules.md`.
 ## Session Protocol
 
 **START:**
-1. Read this file + `Docs/handoff.md` + `Docs/integration-map.md` (all three are mandatory — see Document Map)
+1. Read this file + `Docs/handoff.md` + `Docs/integration-map.md` + `Docs/architecture.md` (all four are mandatory — see Document Map)
 2. Before writing any code: scan the session prompt against the 10 critical rules in CLAUDE.md and every ADR in `Docs/architecture.md`. If the prompt conflicts with any of them, list the conflict and wait for user response. Do not proceed until cleared. Known resolved discrepancies (Next.js version, PM2 vs Docker) do not need flagging.
 3. `git status` && `git log --oneline -10` — verify clean state
 4. Confirm with user what we're working on before writing code
