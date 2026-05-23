@@ -293,7 +293,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `c751713` — [Phase 5e] feat: receipt review UI with OCR status polling
+- Last commit: `174641c` — [Phase 5e] fix: add OCR_SERVICE_URL to env.local and example, update docs gaps — [Phase 5e] feat: receipt review UI with OCR status polling
 
 ---
 
@@ -368,7 +368,28 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ---
 
-## Next Up — Deploy Phase 5e to VPS
+## Next Up
+
+### 1. Complete local smoke test (in progress)
+
+Smoke test begun 2026-05-23. What's been verified so far:
+
+- [x] Dev server starts clean (signup, login work)
+- [x] Receipt upload → `createOcrJobAction` → redirect to `/receipts/[id]/review`
+- [x] Review page polls `checkReceiptStatusAction` correctly
+- [x] Worker script (`node_modules/tsx/dist/cli.cjs lib/worker.ts`) picks up jobs and logs them
+- [ ] OCR service processes jobs (blocked: needs Docker Desktop)
+
+**Blocker:** PaddleOCR requires Python 3.11, not installed. Docker Desktop 4.73.0 installed via winget but requires system restart for CLI to be available. Once Docker is running:
+
+```bash
+# From project root — Docker Compose needs STORAGE_PATH and OCR_SECRET in a .env file
+docker compose up ocr-service -d
+```
+
+Then the worker (already running) will pick up the pending job, process it, and the review page will transition from spinner to prefilled form.
+
+### 2. Deploy Phase 5e to VPS
 
 - Apply migration 0003 on VPS (`make migrate`)
 - Deploy to VPS: `make deploy` + start `worker` service
@@ -389,7 +410,8 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 - [x] Phase 5a complete locally ✓ (2026-05-20)
 - [x] Phase 5a verified on VPS ✓ (2026-05-20) — all 5 tests passed
 - [ ] Manual browser test checklist for Phase 4 (5 formats, .exe rejection, 10MB rejection)
-- [ ] Phase 5e browser smoke test (upload receipt, verify review page, OCR pipeline)
+- [ ] Phase 5e browser smoke test (upload receipt, verify review page, OCR pipeline) — **in progress, blocked on Docker Desktop restart**
+- [ ] Create `.env` file at project root for `docker compose` (copy vars from `.env.local` + set `STORAGE_PATH` to absolute path)
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] ADR-013 revisit: 4 protected pages now — approaching the "5 pages" revisit trigger for route group layout
 - [ ] `app/dashboard/logout-button.tsx` is now unused — can delete

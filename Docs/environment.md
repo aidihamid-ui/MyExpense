@@ -67,46 +67,62 @@ net start PostgreSQL
 
 ### Option A — Docker Compose (preferred, matches VPS)
 
-The `ocr-service` is part of `docker-compose.yml`. Run it alongside the app:
+The `ocr-service` is part of `docker-compose.yml`. Requires **Docker Desktop** installed (winget: `winget install Docker.DockerDesktop`).
+
+**One-time setup: Create a `.env` file at the project root** for Docker Compose. It reads `.env` (not `.env.local`). Copy the values from `.env.local` and set `STORAGE_PATH` to an absolute path:
+
+```env
+STORAGE_PATH=C:/Users/aidih/Desktop/MyExpense/var/receipts
+OCR_SECRET=local-ocr-secret
+```
+
+Docker Compose needs absolute paths on Windows for volume mounts.
+
+**Start the OCR service:**
 
 ```bash
-# From repo root — requires OCR_SECRET and STORAGE_PATH in .env.local
+# From repo root
 docker compose up ocr-service -d
 ```
 
 Uses the `paddleocr_cache` named volume so models (~500 MB) are not re-downloaded on restart.
 
-Note: port 8001 is NOT published to the host in Docker. Call via `http://ocr-service:8001` from within the compose network (ADR-025).
+The Dockerfile already binds `0.0.0.0:8001` inside the container. The `docker-compose.yml` maps `ports: ["8001:8001"]` for local dev so the bare-metal worker can reach it at `http://localhost:8001`. On VPS, no ports are published — the worker runs inside Docker and reaches `http://ocr-service:8001` on the internal network (ADR-025).
 
-### Option B — bare-metal venv (local dev without Docker)
-
-```bash
-cd ocr-service
-py -3.11 -m venv venv          # must be Python 3.11 — PaddleOCR requirement
-venv/Scripts/pip install -r requirements.txt
-```
-
-**Required env vars** (add to shell or `.env.local`):
-
-`OCR_SERVICE_URL` is validated at app boot by `lib/env.ts` — the Next.js dev server will crash on startup if it is missing. Set it in `.env.local`, not just the shell.
-```bash
-export OCR_SECRET=any-local-dev-value
-export STORAGE_PATH=./var/receipts
-export OCR_SERVICE_URL=http://localhost:8001
-```
-
-**Start:**
-```bash
-venv/Scripts/uvicorn main:app --host 127.0.0.1 --port 8001
-```
+**First build** takes 3–5 minutes (downloads python:3.11-slim, pip installs PaddleOCR ~170 MB wheel). Subsequent starts are instant.
 
 **Verify:**
+
 ```bash
-curl http://127.0.0.1:8001/health
+curl http://localhost:8001/health
 # → {"status":"ok"}
 ```
 
-**Binding rule (bare metal):** `127.0.0.1` only, never `0.0.0.0`. Critical Rule #8 in `CLAUDE.md`. In Docker, the service binds `0.0.0.0` inside its container but the port is never published — security posture is equivalent (ADR-025).
+### Option B — bare-metal venv (fallback, not recommended on Windows)
+
+PaddleOCR requires **Python 3.11 exactly** — not 3.12, not 3.14. Most Windows machines have a newer version via winget. Use `py -0` to check available versions. If Python 3.11 is not installed, use Option A (Docker) instead.
+
+```bash
+cd ocr-service
+py -3.11 -m venv venv
+venv/Scripts/pip install -r requirements.txt
+```
+
+**Required env vars** (add to `.env.local` — validated at app boot by `lib/env.ts`):
+
+```bash
+OCR_SECRET=local-ocr-secret
+STORAGE_PATH=./var/receipts
+OCR_SERVICE_URL=http://localhost:8001
+```
+
+**Start:**
+
+```bash
+venv/Scripts/uvicorn ocr-service.main:app --host 127.0.0.1 --port 8001
+```
+
+**Binding rule:** `127.0.0.1` only, never `0.0.0.0`. Critical Rule #8 in `CLAUDE.md`.
 
 ---
 
