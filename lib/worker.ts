@@ -1,5 +1,6 @@
 import { claimNextOcrJob, markOcrJobDone, markOcrJobFailed } from '@/lib/db/queries';
 import { PaddleOcrProvider } from '@/lib/ocr/paddle';
+import { parseReceiptText } from '@/lib/ocr/parser';
 
 const ocr = new PaddleOcrProvider();
 const POLL_INTERVAL_MS = 5_000;
@@ -11,7 +12,9 @@ async function tick() {
   console.log(`[worker] job ${job.id} claimed`);
   try {
     const result = await ocr.extractFromImage(job.imagePath);
-    await markOcrJobDone(job.id, job.receiptId, result.text);
+    const parsed = parseReceiptText(result.text);
+    const extractedDataJson = JSON.stringify(parsed);
+    await markOcrJobDone(job.id, job.receiptId, result.text, extractedDataJson);
     console.log(`[worker] job ${job.id} done`);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

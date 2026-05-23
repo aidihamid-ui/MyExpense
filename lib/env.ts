@@ -6,7 +6,7 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.url(),
   STORAGE_PATH: z.string().min(1),
   OCR_PROVIDER: z.enum(['paddle', 'claude', 'openai']).default('paddle'),
-  OCR_SERVICE_URL: z.url().optional(),
+  OCR_SERVICE_URL: z.url(),
   OCR_SECRET: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });

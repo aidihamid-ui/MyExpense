@@ -290,9 +290,31 @@ export async function getReceiptById(userId: string, receiptId: string) {
   return row ?? null;
 }
 
+/** Returns receipt status, OCR text, and parsed data for the review UI. */
+export async function getReceiptStatus(userId: string, receiptId: string) {
+  const [row] = await db
+    .select({
+      status: receipts.status,
+      extractedDataJson: receipts.extractedDataJson,
+      rawOcrText: receipts.rawOcrText,
+    })
+    .from(receipts)
+    .where(and(eq(receipts.id, receiptId), eq(receipts.userId, userId)));
+  return row ?? null;
+}
+
 // ── OCR Worker Queries ────────────────────────────────────────────────────────
 // These are system queries (no userId filter) — they operate on the job queue,
 // not on user-owned data directly.
+
+/** Creates a pending OCR job for a receipt. Caller must verify receipt ownership first. */
+export async function createOcrJob(receiptId: string) {
+  const [job] = await db
+    .insert(ocrJobs)
+    .values({ receiptId, status: 'pending', attempts: 0, scheduledFor: new Date() })
+    .returning();
+  return job;
+}
 
 /**
  * Atomically claims one pending OCR job where scheduledFor <= now() and
@@ -329,13 +351,18 @@ export async function claimNextOcrJob() {
   return { ...job, imagePath: receipt.imagePath };
 }
 
-/** Sets the job to done and writes OCR text + status to the receipt row. */
-export async function markOcrJobDone(jobId: string, receiptId: string, ocrText: string) {
+/** Sets the job to done and writes OCR text, extracted JSON, and status to the receipt row. */
+export async function markOcrJobDone(
+  jobId: string,
+  receiptId: string,
+  ocrText: string,
+  extractedDataJson: string,
+) {
   await Promise.all([
     db.update(ocrJobs).set({ status: 'done' }).where(eq(ocrJobs.id, jobId)),
     db
       .update(receipts)
-      .set({ rawOcrText: ocrText, status: 'completed' })
+      .set({ rawOcrText: ocrText, extractedDataJson, status: 'completed' })
       .where(eq(receipts.id, receiptId)),
   ]);
 }

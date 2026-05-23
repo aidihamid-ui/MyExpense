@@ -2,8 +2,9 @@
 
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { createReceipt } from '@/lib/db/queries';
+import { createReceipt, createOcrJob, getReceiptById } from '@/lib/db/queries';
 import { env } from '@/lib/env';
+import { z } from 'zod';
 import path from 'path';
 import fs from 'fs/promises';
 import { randomUUID } from 'crypto';
@@ -156,4 +157,37 @@ export async function uploadReceiptAction(
       error: { code: 'DB_ERROR', message: 'Failed to save receipt record.' },
     };
   }
+}
+
+// ── OCR Job ────────────────────────────────────────────────────────────────────
+
+const createOcrJobSchema = z.object({ receiptId: z.string().uuid() });
+
+export type CreateOcrJobResult =
+  | { ok: true; data: { jobId: string } }
+  | { ok: false; error: { code: string; message: string } };
+
+export async function createOcrJobAction(receiptId: string): Promise<CreateOcrJobResult> {
+  // 1. Validate input
+  const parsed = createOcrJobSchema.safeParse({ receiptId });
+  if (!parsed.success) {
+    return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid receipt ID.' } };
+  }
+
+  // 2. Session check
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated.' } };
+  }
+  const userId = session.user.id;
+
+  // 3. Verify receipt ownership — returns null if wrong user or doesn't exist
+  const receipt = await getReceiptById(userId, receiptId);
+  if (!receipt) {
+    return { ok: false, error: { code: 'NOT_FOUND', message: 'Receipt not found.' } };
+  }
+
+  // 4. Create OCR job
+  const job = await createOcrJob(receiptId);
+  return { ok: true, data: { jobId: job.id } };
 }

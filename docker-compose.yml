@@ -71,6 +71,27 @@ services:
     profiles:
       - tools
 
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    environment:
+      DATABASE_URL:       ${DATABASE_URL}
+      STORAGE_PATH:       ${STORAGE_PATH}
+      OCR_SECRET:         ${OCR_SECRET}
+      OCR_SERVICE_URL:    ${OCR_SERVICE_URL:-http://ocr-service:8001}
+      OCR_PROVIDER:       ${OCR_PROVIDER:-paddle}
+      NODE_ENV:           production
+    volumes:
+      - ${STORAGE_PATH}:${STORAGE_PATH}:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      ocr-service:
+        condition: service_started
+    # No ports — worker is internal only
+
 volumes:
   db_data:
   paddleocr_cache:

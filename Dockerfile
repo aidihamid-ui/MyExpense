@@ -18,6 +18,10 @@ ENV DATABASE_URL=postgresql://x:x@localhost:5432/x
 ENV BETTER_AUTH_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ENV BETTER_AUTH_URL=http://localhost:3000
 ENV STORAGE_PATH=/tmp/receipts
+ARG OCR_SERVICE_URL=http://localhost:8001
+ENV OCR_SERVICE_URL=$OCR_SERVICE_URL
+ARG OCR_SECRET=placeholder-secret-not-used-at-runtime
+ENV OCR_SECRET=$OCR_SECRET
 RUN npm run build
 
 # ── Stage 3: production runner (standalone, non-root) ─────────────────────────
@@ -49,3 +53,10 @@ COPY . .
 # DATABASE_URL must be provided at runtime via --env or compose env.
 # Drizzle-kit reads it from the environment directly (no --env-file needed).
 CMD ["npx", "drizzle-kit", "migrate"]
+
+# ── Stage 5: OCR worker (tsx runner) ────────────────────────────────────
+FROM node:24-alpine AS worker
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+CMD ["node_modules/.bin/tsx", "lib/worker.ts"]
