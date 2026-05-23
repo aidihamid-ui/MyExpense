@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { createReceipt, createOcrJob, getReceiptById } from '@/lib/db/queries';
+import { createReceipt, createOcrJob, getReceiptById, getReceiptStatus } from '@/lib/db/queries';
 import { env } from '@/lib/env';
 import { z } from 'zod';
 import path from 'path';
@@ -191,3 +191,36 @@ export async function createOcrJobAction(receiptId: string): Promise<CreateOcrJo
   const job = await createOcrJob(receiptId);
   return { ok: true, data: { jobId: job.id } };
 }
+
+// --- Receipt Status Polling ---
+
+const checkReceiptStatusSchema = z.object({ receiptId: z.string().uuid() });
+
+export type CheckReceiptStatusResult =
+  | { ok: true; data: { status: string; extractedDataJson: string | null; rawOcrText: string | null } }
+  | { ok: false; error: { code: string; message: string } };
+
+export async function checkReceiptStatusAction(
+  receiptId: string,
+): Promise<CheckReceiptStatusResult> {
+  // 1. Validate input
+  const parsed = checkReceiptStatusSchema.safeParse({ receiptId });
+  if (!parsed.success) {
+    return { ok: false, error: { code: 'INVALID_INPUT', message: 'Invalid receipt ID.' } };
+  }
+
+  // 2. Session check
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) {
+    return { ok: false, error: { code: 'UNAUTHORIZED', message: 'Not authenticated.' } };
+  }
+
+  // 3. Fetch status (filters by userId internally)
+  const row = await getReceiptStatus(session.user.id, receiptId);
+  if (!row) {
+    return { ok: false, error: { code: 'NOT_FOUND', message: 'Receipt not found.' } };
+  }
+
+  return { ok: true, data: row };
+}
+

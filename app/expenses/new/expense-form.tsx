@@ -1,9 +1,10 @@
 'use client';
 
 import { useActionState, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createExpenseAction, type CreateExpenseState } from '@/lib/actions/expenses';
-import { uploadReceiptAction } from '@/lib/actions/receipts';
+import { uploadReceiptAction, createOcrJobAction } from '@/lib/actions/receipts';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,11 +33,11 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
     null,
   );
   const [isPending, startTransition] = useTransition();
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>(
+  const router = useRouter();
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'enqueuing_ocr' | 'error'>(
     'idle',
   );
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [pendingReceiptId, setPendingReceiptId] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -46,8 +47,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
     const fileInput = form.elements.namedItem('receiptFile') as HTMLInputElement | null;
     const file = fileInput?.files?.[0];
 
-    let receiptId = pendingReceiptId;
-
+    // File upload path: upload -> enqueue OCR -> redirect to review
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
         setUploadStatus('error');
@@ -75,21 +75,33 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         return;
       }
 
-      setUploadStatus('done');
-      receiptId = result.data.receiptId;
-      setPendingReceiptId(receiptId);
+      const receiptId = result.data.receiptId;
+      setUploadStatus('enqueuing_ocr');
+
+      let ocrResult: Awaited<ReturnType<typeof createOcrJobAction>>;
+      try {
+        ocrResult = await createOcrJobAction(receiptId);
+      } catch {
+        router.push(`/receipts/${receiptId}/review?warning=ocr_failed`);
+        return;
+      }
+
+      if (!ocrResult.ok) {
+        router.push(`/receipts/${receiptId}/review?warning=ocr_failed`);
+        return;
+      }
+
+      router.push(`/receipts/${receiptId}/review`);
+      return;
     }
 
-    if (receiptId) {
-      formData.set('receiptId', receiptId);
-    }
-
+    // No file: create expense directly (unchanged path)
     startTransition(() => {
       dispatch(formData);
     });
   }
 
-  const submitting = isPending || uploadStatus === 'uploading';
+  const submitting = isPending || uploadStatus === 'uploading' || uploadStatus === 'enqueuing_ocr';
 
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm">
@@ -216,8 +228,8 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
           {uploadStatus === 'uploading' && (
             <p className="mt-1 text-xs text-muted-foreground">Uploading receipt…</p>
           )}
-          {uploadStatus === 'done' && (
-            <p className="mt-1 text-xs text-green-600">Receipt uploaded.</p>
+          {uploadStatus === 'enqueuing_ocr' && (
+            <p className="mt-1 text-xs text-muted-foreground">Starting OCR…</p>
           )}
           {uploadStatus === 'error' && (
             <p className="mt-1 text-xs text-destructive">{uploadError}</p>
@@ -228,9 +240,11 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
           <Button type="submit" disabled={submitting} className="h-11 flex-1">
             {uploadStatus === 'uploading'
               ? 'Uploading receipt…'
-              : isPending
-                ? 'Saving…'
-                : 'Save expense'}
+              : uploadStatus === 'enqueuing_ocr'
+                ? 'Starting OCR…'
+                : isPending
+                  ? 'Saving…'
+                  : 'Save expense'}
           </Button>
           <Button variant="outline" asChild className="h-11">
             <Link href="/expenses">Cancel</Link>

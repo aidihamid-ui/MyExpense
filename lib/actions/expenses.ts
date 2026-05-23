@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { createExpenseSchema } from '@/lib/validators/expense';
-import { createExpense, updateExpense, deleteExpense } from '@/lib/db/queries';
+import { createExpense, updateExpense, deleteExpense, getReceiptById } from '@/lib/db/queries';
 
 export type CreateExpenseState = {
   errors?: {
@@ -42,6 +42,14 @@ export async function createExpenseAction(
   }
 
   const receiptId = (formData.get('receiptId') as string) || undefined;
+
+  // Verify receipt ownership if receiptId is provided (multi-tenancy boundary)
+  if (receiptId) {
+    const receipt = await getReceiptById(session.user.id, receiptId);
+    if (!receipt) {
+      return { message: 'Receipt not found.' };
+    }
+  }
 
   try {
     await createExpense(session.user.id, {
