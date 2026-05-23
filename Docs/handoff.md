@@ -2,9 +2,9 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-05-22
+**Last updated:** 2026-05-23
 **Last session by:** Claude
-**Current phase:** Phase 5d COMPLETE. Receipt parser + unit tests.
+**Current phase:** Phase 5e Session A COMPLETE. Backend wiring — no UI.
 
 ---
 
@@ -130,6 +130,34 @@ _Dependencies:_
 
 ---
 
+### Phase 5e Session A — COMPLETE (2026-05-23)
+
+_Backend-only — no UI changes. Commit `a9b6236`._
+
+_env + Dockerfile:_
+- `OCR_SERVICE_URL: z.url()` (was `.optional()`) in `lib/env.ts` — now required
+- Dockerfile builder stage: `ARG`/`ENV` placeholders for `OCR_SERVICE_URL` and `OCR_SECRET`
+
+_Worker parser wiring (`lib/worker.ts`):_
+- After OCR succeeds, calls `parseReceiptText(result.text)` → stores `JSON.stringify(parsed)` as `extractedDataJson` on the receipt row
+- `markOcrJobDone` signature updated to accept `extractedDataJson: string` (4th param)
+
+_Query layer (`lib/db/queries.ts`):_
+- `createOcrJob(receiptId)` — inserts pending ocr_jobs row (system query, no userId filter)
+- `getReceiptStatus(userId, receiptId)` — returns `{ status, extractedDataJson, rawOcrText }` filtered by userId
+
+_Action (`lib/actions/receipts.ts`):_
+- `createOcrJobAction(receiptId)` — validates UUID → session check → ownership via `getReceiptById` → inserts OCR job
+
+_Migration:_
+- Migration 0003 (`ocr_jobs` table) applied locally via `npm run db:migrate`
+
+_Docker:_
+- New `worker` Dockerfile stage — copies deps + source, runs via `tsx`
+- `worker` service in `docker-compose.yml` — same env vars as `app`, `STORAGE_PATH` mounted `:ro`, depends on `db` (healthy) + `ocr-service` (started), no published ports
+
+---
+
 ### Phase 5c — COMPLETE (2026-05-22)
 
 _Schema (`lib/db/schema.ts`):_
@@ -228,7 +256,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `8c2373e` — [Phase 5d] feat: receipt parser with unit tests
+- Last commit: `a9b6236` — [Phase 5e] feat: worker parser wiring, createOcrJobAction, getReceiptStatus, worker in docker-compose
 
 ---
 
@@ -303,16 +331,15 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ---
 
-## Next Up — Phase 5e: Wire it all together
+## Next Up — Phase 5e Session B (final sub-phase)
 
-Phase 5d is complete. Parser is done and tested.
+Session A is complete. Backend is wired. Session B covers the UI and deploy:
 
-Phase 5e (final sub-phase):
-- Wire `parseReceiptText` into the worker: after OCR success, parse + store `extractedDataJson` on receipts row
-- Apply migration 0003 locally and on VPS (`make migrate`)
-- Add worker to `docker-compose.yml`
-- Review UI: show OCR status + extracted data on receipt/expense detail
-- Make `OCR_SERVICE_URL` required in `lib/env.ts` (remove `.optional()`)
+- Wire `createOcrJobAction` into the upload flow — call it after `uploadReceiptAction` succeeds
+- Review UI: show OCR status (`pending`/`processing`/`done`/`failed`) + extracted data on receipt/expense detail
+- Apply migration 0003 on VPS (`make migrate`)
+- Deploy to VPS: `make deploy` + start `worker` service
+- Run Phase 5e test checklist: upload 10 receipts, verify OCR pipeline end-to-end, worker restart resilience, cross-user isolation
 
 ---
 
