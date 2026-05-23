@@ -338,7 +338,7 @@ const result = await ocr.extractFromImage('/var/lib/myexpense/receipts/<userId>/
 
 ## 19. Worker job lifecycle (Phase 5c+)
 
-**Rule:** OCR jobs are created when a receipt upload completes (Phase 5e will add the insert). The worker polls every 5s, claims one job at a time, runs OCR, and updates both `ocr_jobs` and `receipts`. Never call these worker queries from server actions or route handlers.
+**Rule:** OCR jobs are created via `createOcrJobAction` after a receipt upload completes (see §21). The worker polls every 5s, claims one job at a time, runs OCR + parser, and updates both `ocr_jobs` and `receipts`. Never call worker queries from server actions or route handlers.
 
 **Job status flow:**
 ```
@@ -386,6 +386,105 @@ const parsed = parseReceiptText(ocrResult.text);
 - `merchant` — first non-digit, non-skip-prefix line (≤80 chars, max 3 tries); null if none
 
 **Tests:** `lib/ocr/parser.test.ts` — `npm run test`
+
+---
+
+## 21. createOcrJobAction (Phase 5e+)
+
+**Rule:** After `uploadReceiptAction` returns a `receiptId`, call `createOcrJobAction(receiptId)` to enqueue the receipt for async OCR processing. This must be called before `createExpenseAction` so the expense references a receipt that is already queued for OCR. The action verifies session + receipt ownership before creating the job.
+
+**File:** `lib/actions/receipts.ts`
+
+**Return type:**
+```ts
+type CreateOcrJobResult =
+  | { ok: true; data: { jobId: string } }
+  | { ok: false; error: { code: string; message: string } };
+```
+
+**Error codes:**
+| Code | Condition |
+|---|---|
+| `INVALID_INPUT` | receiptId is not a valid UUID |
+| `UNAUTHORIZED` | No session |
+| `NOT_FOUND` | Receipt not found or wrong owner (same response — existence leak prevention per ADR-014) |
+
+**Usage (two-step upload flow in Phase 5e Session B):**
+```ts
+// Step 1: Upload
+const uploadResult = await uploadReceiptAction(formData);
+if (!uploadResult.ok) return uploadResult.error;
+
+// Step 2: Enqueue OCR
+const ocrResult = await createOcrJobAction(uploadResult.data.receiptId);
+if (!ocrResult.ok) return ocrResult.error;
+
+// Step 3: Create expense
+formData.set('receiptId', uploadResult.data.receiptId);
+// ... call createExpenseAction(formData)
+```
+
+**Underlying query:** `createOcrJob(receiptId)` in `lib/db/queries.ts` — inserts `ocr_jobs` row (status: `pending`, attempts: 0, scheduledFor: now). System query — no userId filter.
+
+---
+
+## 22. getReceiptStatus (Phase 5e+)
+
+**Rule:** Poll `getReceiptStatus(userId, receiptId)` to check whether OCR processing has completed and to retrieve extracted data for the review UI. Returns `null` if the receipt doesn't exist or belongs to another user.
+
+**File:** `lib/db/queries.ts`
+
+**Return type:**
+```ts
+{ status: string; extractedDataJson: string | null; rawOcrText: string | null } | null
+```
+
+**Status values:** `pending` → `completed` (OCR done, data in `extractedDataJson`) or `failed` (error in the receipts row; raw OcrText may or may not be present)
+
+**Usage (Phase 5e Session B review UI):**
+```ts
+const status = await getReceiptStatus(userId, receiptId);
+if (!status) return notFound(); // wrong owner or doesn't exist
+
+if (status.status === 'completed') {
+  const parsed = JSON.parse(status.extractedDataJson ?? '{}');
+  // pre-fill form with parsed.total, parsed.date, parsed.merchant
+  // show rawOcrText alongside for user verification
+}
+```
+
+---
+
+## 23. Worker service in Docker (Phase 5e+)
+
+**Rule:** The OCR worker runs as a separate Docker Compose service alongside `app`, `db`, and `ocr-service`. It uses a dedicated Dockerfile stage (`target: worker`) that copies full node_modules and source, running via `tsx`. Never publish the worker's port — it is internal only.
+
+**File:** `docker-compose.yml` (worker service), `Dockerfile` (worker stage)
+
+**Worker stage (Dockerfile):**
+```dockerfile
+FROM node:24-alpine AS worker
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+CMD ["node_modules/.bin/tsx", "lib/worker.ts"]
+```
+
+**Service config (docker-compose.yml):**
+```yaml
+worker:
+  target: worker           # uses the worker Dockerfile stage
+  restart: unless-stopped
+  environment:             # same env vars as app
+    DATABASE_URL, STORAGE_PATH, OCR_SECRET, OCR_SERVICE_URL, OCR_PROVIDER, NODE_ENV
+  volumes:
+    - ${STORAGE_PATH}:${STORAGE_PATH}:ro   # read-only receipt files
+  depends_on:
+    db: condition: service_healthy
+    ocr-service: condition: service_started
+```
+
+**Local (no Docker):** `npm run worker` (calls `tsx lib/worker.ts`). Requires the same env vars in `.env.local`.
 
 ---
 
