@@ -10,7 +10,9 @@ services:
     volumes:
       - ${STORAGE_PATH}:${STORAGE_PATH}:ro
       - paddleocr_cache:/root/.paddleocr
-    # No ports: — not published to host; only app can reach it via http://ocr-service:8001
+    ports:
+      - "8001:8001"  # local dev only — exposed so bare-metal worker can reach it
+    # On VPS: remove the ports: mapping — worker reaches http://ocr-service:8001 internally
 
   app:
     build:
