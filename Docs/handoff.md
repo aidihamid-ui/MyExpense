@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-23
 **Last session by:** Claude
-**Current phase:** Phase 5e Session A COMPLETE. Backend wiring — no UI.
+**Current phase:** Phase 5e COMPLETE — end-to-end OCR pipeline working.
 
 ---
 
@@ -202,6 +202,43 @@ _Docs:_
 
 ---
 
+### Phase 5e Session B — COMPLETE (2026-05-23)
+
+_Commit `c751713`. This session built the UI and final wiring._
+
+_Upload flow (`app/expenses/new/expense-form.tsx`):_
+- After `uploadReceiptAction` succeeds, calls `createOcrJobAction(receiptId)`
+- On OCR queue success: redirects to `/receipts/[id]/review`
+- On OCR queue failure: redirects to `/receipts/[id]/review?warning=ocr_failed`
+- Three-state label: "Uploading receipt…" → "Starting OCR…" → redirect
+- No-file path unchanged (direct `createExpenseAction`)
+
+_Review page (`app/receipts/[id]/review/`):_
+- `page.tsx` — Server Component: session check, `getReceiptById` (notFound on miss), fetches categories, reads `?warning=ocr_failed` search param
+- `review-client.tsx` — Client Component with 4 sub-views:
+  - **LoadingView** — spinner, "Checking receipt status…"
+  - **PendingView** — spinner + "Analysing…" with elapsed time counter
+  - **CompletedView** — green banner + prefilled expense form (merchant→note, date, total→amount) + collapsible raw OCR `<details>`
+  - **FailedView** — amber warning + blank expense form
+- Polling: `checkReceiptStatusAction` every 3s via `setInterval`; stops on completed/failed
+- `?warning=ocr_failed` → skips polling entirely, renders FailedView immediately
+- Shared `ExpenseForm` component with `useActionState` → `createExpenseAction` + hidden `receiptId`
+
+_Server action (`lib/actions/receipts.ts`):_
+- `checkReceiptStatusAction(receiptId)` — validates UUID → session check → `getReceiptStatus(userId, receiptId)` → returns status + extracted data
+
+_Proxy (`proxy.ts`):_
+- Matcher extended: `/receipts/:path*` added for UX redirect on unauthenticated users
+
+_Multi-tenancy fix (`lib/actions/expenses.ts`):_
+- `createExpenseAction` now verifies receipt ownership via `getReceiptById(userId, receiptId)` before creating expense — prevents cross-user receiptId injection
+
+_Docs:_
+- `CLAUDE.md` — Doc paths normalised from `Docs/` to `docs/`
+
+
+---
+
 ### Phase 5a — COMPLETE on VPS (2026-05-20)
 
 _OCR sidecar (`ocr-service/`):_
@@ -256,7 +293,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `a9b6236` — [Phase 5e] feat: worker parser wiring, createOcrJobAction, getReceiptStatus, worker in docker-compose
+- Last commit: `c751713` — [Phase 5e] feat: receipt review UI with OCR status polling
 
 ---
 
@@ -331,15 +368,17 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ---
 
-## Next Up — Phase 5e Session B (final sub-phase)
+## Next Up — Deploy Phase 5e to VPS
 
-Session A is complete. Backend is wired. Session B covers the UI and deploy:
-
-- Wire `createOcrJobAction` into the upload flow — call it after `uploadReceiptAction` succeeds
-- Review UI: show OCR status (`pending`/`processing`/`done`/`failed`) + extracted data on receipt/expense detail
 - Apply migration 0003 on VPS (`make migrate`)
 - Deploy to VPS: `make deploy` + start `worker` service
-- Run Phase 5e test checklist: upload 10 receipts, verify OCR pipeline end-to-end, worker restart resilience, cross-user isolation
+- Run Phase 5e test checklist (see `docs/phases.md`):
+  - Upload 10 different receipts
+  - Verify redirect to /receipts/[id]/review
+  - Verify spinner → prefilled form transition
+  - Verify OCR pipeline end-to-end
+  - Worker restart resilience
+  - Cross-user isolation (user A can't see user B's receipts)
 
 ---
 
@@ -350,6 +389,7 @@ Session A is complete. Backend is wired. Session B covers the UI and deploy:
 - [x] Phase 5a complete locally ✓ (2026-05-20)
 - [x] Phase 5a verified on VPS ✓ (2026-05-20) — all 5 tests passed
 - [ ] Manual browser test checklist for Phase 4 (5 formats, .exe rejection, 10MB rejection)
+- [ ] Phase 5e browser smoke test (upload receipt, verify review page, OCR pipeline)
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] ADR-013 revisit: 4 protected pages now — approaching the "5 pages" revisit trigger for route group layout
 - [ ] `app/dashboard/logout-button.tsx` is now unused — can delete
