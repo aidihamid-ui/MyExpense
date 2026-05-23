@@ -197,16 +197,44 @@ The meaty phase. Build in 5 sub-steps.
 - Conservative: leave fields empty rather than guess wrong
 - Return both structured data AND raw text (UI shows raw as fallback)
 
-### 5e. Review UI
-- After upload: "Processing your receipt..." status (poll every 3s, or use Server-Sent Events)
-- Once done: prefilled form + raw OCR text shown alongside
-- User edits any field, then confirms → creates expense
+### 5e. Review UI + final wiring (COMPLETE)
+
+_Implemented 2026-05-23. Tag: `v0.5-ocr-working`._
+
+**Upload flow (`app/expenses/new/expense-form.tsx`):**
+- After `uploadReceiptAction` succeeds, calls `createOcrJobAction(receiptId)`
+- On success: redirects to `/receipts/[id]/review`
+- On failure: redirects to `/receipts/[id]/review?warning=ocr_failed`
+- No-file path unchanged (direct `createExpenseAction`)
+
+**Review page (`app/receipts/[id]/review/`):**
+- Server Component: session check, receipt ownership via `getReceiptById` (notFound on miss), reads `?warning=ocr_failed`
+- Client Component: polls `checkReceiptStatusAction` every 3s, stops on completed/failed
+- Four sub-views: Loading, Pending (spinner + elapsed), Completed (green banner + prefilled form + collapsible raw OCR), Failed (amber warning + blank form)
+- Shared `ExpenseForm` with `useActionState` → `createExpenseAction` + hidden `receiptId`
+
+**Security fix (`lib/actions/expenses.ts`):**
+- `createExpenseAction` now verifies receipt ownership via `getReceiptById` before creating expense (ADR-031)
+
+**Proxy (`proxy.ts`):**
+- Matcher extended to `/receipts/:path*` for UX redirect (ADR-006)
+
+**Env:**
+- `OCR_SERVICE_URL` now required in `.env.local` (validated at boot by `lib/env.ts`)
 
 ### Test
+- Upload receipt → verify redirect to /receipts/[id]/review
+- Verify spinner shows during OCR processing
+- Start worker in separate terminal: `npm run worker`
+- Verify worker picks up job and logs it
+- Verify page transitions from spinner to prefilled form
+- Confirm expense creates correctly with receiptId linked
+- Test ?warning=ocr_failed path: upload receipt, kill OCR service, verify FailedView shows
 - Upload 10 different receipts: clean, crumpled, faded thermal paper, Malay-only, English-only, mixed
 - Document accuracy per category
 - Worker survives Python service restart (job retries)
 - Two users uploading simultaneously: jobs don't get crossed
+- Cross-user isolation: user A cannot see user B's receipt review page
 
 ### Commit + tag
 `v0.5-ocr-working` — **deploy**. This deploy will reveal Python differences on Ubuntu — fix and document in `deployment.md`.

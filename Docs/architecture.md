@@ -982,3 +982,102 @@ Zero config for TypeScript was the deciding factor — `npm install -D vitest` a
 
 **Revisit trigger:**
 If we ever need Jest-specific features (e.g. module mocking via `jest.mock`) — unlikely for this project's test surface.
+
+### ADR-029: Three-step receipt flow — upload → OCR queue → review → confirm
+
+**Date:** 2026-05-23
+**Status:** Accepted
+**Phase:** Phase 5e
+
+**Context:**
+ADR-023 established a two-step upload pattern: `uploadReceiptAction` → `createExpenseAction`. Phase 5e adds async OCR between upload and expense creation. The user uploads, OCR runs in the background, then the user reviews extracted data before confirming. This extends the two-step pattern to a three-step flow.
+
+**Options considered:**
+
+1. **Upload → wait for OCR synchronously → show prefilled form** — User waits 5–10 seconds on the upload page while OCR runs. Simple to implement but bad UX — user stares at a spinner with no feedback.
+2. **Upload → enqueue OCR → redirect to review page → poll for results** — User sees the review page immediately with a spinner. OCR runs in the background. User gets live feedback (elapsed time). If OCR fails, user can still enter data manually without re-uploading.
+3. **Upload + create expense immediately, attach OCR results later** — Expense is created without OCR data, OCR runs later and updates the expense. Complicates the expense model (partially-filled vs complete).
+
+**Decision:**
+Option 2: redirect to `/receipts/[id]/review` after enqueuing OCR. Poll every 3 seconds for results.
+
+**Reasoning:**
+- Best UX: user sees progress, can bail out to manual entry at any point
+- OCR failure is non-fatal — the receipt is already saved, user can manually enter
+- `?warning=ocr_failed` on the redirect URL communicates that OCR was never queued (e.g., `createOcrJobAction` failed), so the review page skips polling entirely
+- Consistent with ADR-023's separation-of-concerns principle — upload, OCR queueing, and expense creation remain three distinct actions
+
+**Trade-offs we accept:**
+- Three network round-trips total (upload + OCR queue + expense create) — acceptable at 6-user scale
+- If the worker is not running, the review page polls forever showing "pending" — user must manually navigate away or refresh
+- The `?warning=ocr_failed` query param is visible in the URL — acceptable since it only conveys "OCR didn't start", not sensitive data
+
+**Revisit trigger:**
+If polling latency becomes an issue (e.g., worker takes >30s), consider Server-Sent Events. If multiple pending receipts accumulate, consider a batch status endpoint.
+
+---
+
+### ADR-030: Frontend polling — 3-second `setInterval`, no SSE/WebSocket
+
+**Date:** 2026-05-23
+**Status:** Accepted
+**Phase:** Phase 5e
+
+**Context:**
+The review page needs to know when OCR processing completes. Two approaches: client-side polling or server-push (SSE/WebSocket).
+
+**Options considered:**
+
+1. **3-second `setInterval` polling via server action** — Client calls `checkReceiptStatusAction` every 3s. Simple, no infrastructure changes. Adds one DB query every 3s per active review page.
+2. **Server-Sent Events** — Server pushes status updates. Lower latency, fewer requests. Requires a dedicated SSE endpoint and connection management in Next.js.
+3. **WebSocket** — Full bidirectional channel. Overkill for a single status update.
+
+**Decision:**
+Option 1: 3-second `setInterval` polling.
+
+**Reasoning:**
+At 6 users, the polling load is trivially small (at most 6 concurrent polls × 1 query/3s = 2 queries/second peak). SSE adds complexity (event stream handling, reconnection logic, Next.js route constraints) with no meaningful benefit at this scale. The 3-second interval is imperceptible to the user — OCR takes 5–10 seconds, so the UI updates within 1–2 poll cycles of completion.
+
+**Implementation details:**
+- Initial poll fires via `setTimeout(0)` inside `useEffect` (avoids React's sync-setState-in-effect lint rule)
+- `useCallback` wraps the poll function so the interval reference is stable
+- A second `useEffect` watches `pageStatus` and clears the interval when status is `completed` or `failed`
+- `?warning=ocr_failed` on mount → polling skipped entirely (no `ocr_jobs` row exists)
+
+**Trade-offs we accept:**
+- Maximum 3-second staleness between OCR completion and UI update
+- One extra DB query every 3 seconds per active review page (trivial)
+- No reconnection logic needed — if a poll fails, the next interval retries naturally
+
+**Revisit trigger:**
+If user count exceeds 50 or if OCR latency drops below 2 seconds (e.g., switching to Claude OCR), consider SSE for instant feedback.
+
+---
+
+### ADR-031: Receipt ownership check in `createExpenseAction` (not in query layer)
+
+**Date:** 2026-05-23
+**Status:** Accepted
+**Phase:** Phase 5e
+
+**Context:**
+A security review during Phase 5e Session B found that `createExpense` in `lib/db/queries.ts` accepts a `receiptId` parameter without verifying the receipt belongs to the user. A malicious client could inject another user's receipt ID. While the receipt file itself is protected by the API route's userId check, data integrity is violated (wrong receipt linked to expense). The ownership check needs to live somewhere.
+
+**Options considered:**
+
+1. **Check in `createExpense` (query layer)** — Consistent with other query helpers that verify ownership (e.g., `updateExpense` checks `getExpenseById` first). But `createExpense` currently has no ownership checks because it creates a new row with `userId` from the session — it doesn't need to. Adding a cross-table check here breaks the single-responsibility pattern.
+2. **Check in `createExpenseAction` (action layer)** — The server action already has the session and can call `getReceiptById(userId, receiptId)` before calling `createExpense`. Keeps the query layer focused on its own table's data.
+3. **Check via a database constraint (FK trigger)** — PostgreSQL could enforce that `receipts.userId` matches `expenses.userId` for the referenced row. Requires a composite foreign key or a trigger. Over-engineered for this scale.
+
+**Decision:**
+Option 2: ownership check in `createExpenseAction`.
+
+**Reasoning:**
+The server action is the natural integration point — it has the session user ID and orchestrates multiple query calls. Adding a `getReceiptById` check before `createExpense` is minimal, readable, and doesn't change the query layer's contract. This is consistent with ADR-012 (server actions in `lib/actions/` as the orchestration layer) and ADR-023 (server actions verify ownership before mutations).
+
+**Trade-offs we accept:**
+- If `createExpense` is ever called from a different code path (e.g., a bulk import action), that path must also add the ownership check — there is no enforcement at the DB level
+- The check adds one extra DB query per expense creation with a receipt (one `SELECT` from `receipts` before the `INSERT` into `expenses`)
+
+**Revisit trigger:**
+If expense creation throughput becomes a concern (unlikely at 6 users), consider moving the check to the query layer or using a DB-level constraint.

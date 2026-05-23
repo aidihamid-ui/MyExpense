@@ -504,3 +504,78 @@ worker:
 // URL-param filter (ADR-021):
 <Select value={categoryId} onValueChange={setCategoryId}>...</Select>
 ```
+
+## 24. checkReceiptStatusAction (Phase 5e+)
+
+**Rule:** Call `checkReceiptStatusAction(receiptId)` from a Client Component to poll receipt OCR status. Call it on a 3-second interval; stop when status is `completed` or `failed`. Never call from server components — this is a polling endpoint designed for `useEffect` + `setInterval`.
+
+**File:** `lib/actions/receipts.ts`
+
+**Return type:**
+```ts
+type CheckReceiptStatusResult =
+  | { ok: true; data: { status: string; extractedDataJson: string | null; rawOcrText: string | null } }
+  | { ok: false; error: { code: string; message: string } };
+```
+
+**Error codes:**
+| Code | Condition |
+|---|---|
+| `INVALID_INPUT` | receiptId is not a valid UUID |
+| `UNAUTHORIZED` | No session |
+| `NOT_FOUND` | Receipt not found or wrong owner (same response — existence leak prevention per ADR-014) |
+
+**Status values returned in `data.status`:**
+| Status | Meaning |
+|---|---|
+| `pending` | OCR job not yet picked up by worker |
+| `processing` | Worker is running OCR right now |
+| `completed` | OCR done; `extractedDataJson` contains parsed receipt data, `rawOcrText` contains full OCR output |
+| `failed` | OCR failed permanently (or any unexpected status) |
+
+**Usage (review-client.tsx):**
+```ts
+const poll = useCallback(async () => {
+  const result = await checkReceiptStatusAction(receiptId);
+  if (!result.ok) { /* handle error */ return; }
+  const { status, extractedDataJson, rawOcrText } = result.data;
+  if (status === 'completed') { /* stop polling, show form */ }
+}, [receiptId]);
+```
+
+---
+
+## 25. Review page flow (Phase 5e+)
+
+**Rule:** After uploading a receipt with OCR, the user lands on `/receipts/[id]/review`. This page polls `checkReceiptStatusAction` every 3 seconds until the OCR worker finishes, then shows a prefilled expense form. If OCR was never queued (`?warning=ocr_failed`), skip polling and show the blank form immediately.
+
+**Files:** `app/receipts/[id]/review/page.tsx` (Server Component), `app/receipts/[id]/review/review-client.tsx` (Client Component)
+
+**Page lifecycle:**
+```
+Server Component (page.tsx):
+  1. auth.api.getSession() → redirect /login if null
+  2. getReceiptById(userId, id) → notFound() if null (ADR-014)
+  3. getCategories(userId) → pass to client
+  4. Check searchParams.warning === 'ocr_failed' → pass ocrFailed prop
+
+Client Component (review-client.tsx):
+  1. If ocrFailed: render FailedView immediately (no polling)
+  2. Else: start 3s polling via checkReceiptStatusAction
+  3. loading → pending → processing → completed (prefilled form)
+                                    → failed (blank form + warning)
+  4. On confirm: submit createExpenseAction with receiptId + form data
+```
+
+**Sub-views:**
+- **LoadingView** — spinner, "Checking receipt status…"
+- **PendingView** — spinner + "Analysing your receipt…" + elapsed time
+- **CompletedView** — green banner + prefilled form (merchant→note, date, total→amount) + collapsible raw OCR `<details>`
+- **FailedView** — amber warning + blank expense form
+
+**Polling stops** when `status` becomes `completed` or `failed`. The `?warning=ocr_failed` flag on mount means `createOcrJobAction` failed during upload — no `ocr_jobs` row exists, so polling would loop forever on `pending`. In this case polling is skipped and FailedView renders immediately.
+
+**Proxy coverage:** `/receipts/:path*` added to `proxy.ts` matcher (UX redirect only — real auth is in the Server Component per ADR-006).
+
+**Expense form (shared):** Uses `useActionState` + `createExpenseAction`. `receiptId` is passed as a hidden `<input>`. The action now verifies receipt ownership before creating the expense (ADR-031).
+

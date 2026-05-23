@@ -87,9 +87,12 @@ venv/Scripts/pip install -r requirements.txt
 ```
 
 **Required env vars** (add to shell or `.env.local`):
+
+`OCR_SERVICE_URL` is validated at app boot by `lib/env.ts` — the Next.js dev server will crash on startup if it is missing. Set it in `.env.local`, not just the shell.
 ```bash
 export OCR_SECRET=any-local-dev-value
 export STORAGE_PATH=./var/receipts
+export OCR_SERVICE_URL=http://localhost:8001
 ```
 
 **Start:**
