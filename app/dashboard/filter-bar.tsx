@@ -55,14 +55,14 @@ export default function FilterBar({
 
   return (
     <Card className="shadow-sm">
-      <CardContent className="flex flex-wrap items-end gap-3 pt-4">
+      <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-muted-foreground">From</label>
           <Input
             type="date"
             value={from}
             onChange={(e) => setFrom(e.target.value)}
-            className="h-9 w-36"
+            className="h-11 w-full sm:w-36"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -71,14 +71,14 @@ export default function FilterBar({
             type="date"
             value={to}
             onChange={(e) => setTo(e.target.value)}
-            className="h-9 w-36"
+            className="h-11 w-full sm:w-36"
           />
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-muted-foreground">Category</label>
           {/* Controlled Select (no name prop) — URL-param navigation, not FormData */}
           <Select value={categoryId} onValueChange={setCategoryId}>
-            <SelectTrigger className="h-9 w-44">
+            <SelectTrigger className="h-11 w-full sm:w-44">
               <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
@@ -91,12 +91,14 @@ export default function FilterBar({
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={apply} size="sm" className="h-9">
-          Apply
-        </Button>
-        <Button onClick={reset} variant="outline" size="sm" className="h-9">
-          Reset
-        </Button>
+        <div className="flex gap-3 sm:contents">
+          <Button onClick={apply} className="h-11 flex-1 sm:flex-none">
+            Apply
+          </Button>
+          <Button onClick={reset} variant="outline" className="h-11 flex-1 sm:flex-none">
+            Reset
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

@@ -34,6 +34,7 @@ export default function ChangePasswordForm() {
           type="password"
           autoComplete="current-password"
           disabled={isPending}
+          className="h-11"
         />
         {state?.ok === false && state.errors?.currentPassword && (
           <p className="text-xs text-destructive">{state.errors.currentPassword[0]}</p>
@@ -50,6 +51,7 @@ export default function ChangePasswordForm() {
           type="password"
           autoComplete="new-password"
           disabled={isPending}
+          className="h-11"
         />
         {state?.ok === false && state.errors?.newPassword && (
           <p className="text-xs text-destructive">{state.errors.newPassword[0]}</p>
@@ -66,13 +68,14 @@ export default function ChangePasswordForm() {
           type="password"
           autoComplete="new-password"
           disabled={isPending}
+          className="h-11"
         />
         {state?.ok === false && state.errors?.confirmNewPassword && (
           <p className="text-xs text-destructive">{state.errors.confirmNewPassword[0]}</p>
         )}
       </div>
 
-      <Button type="submit" disabled={isPending} className="h-11">
+      <Button type="submit" disabled={isPending} className="h-11 w-full">
         {isPending ? 'Saving…' : 'Change password'}
       </Button>
     </form>

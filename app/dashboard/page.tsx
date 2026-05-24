@@ -177,6 +177,7 @@ export default async function DashboardPage({
                 No expenses in this period
               </p>
             ) : (
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -201,6 +202,7 @@ export default async function DashboardPage({
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

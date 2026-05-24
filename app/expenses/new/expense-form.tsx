@@ -253,7 +253,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
                   ? 'Saving…'
                   : 'Save expense'}
           </Button>
-          <Button variant="outline" asChild className="h-11">
+          <Button variant="outline" asChild className="h-11 flex-1">
             <Link href="/expenses">Cancel</Link>
           </Button>
         </div>

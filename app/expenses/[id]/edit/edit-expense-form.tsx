@@ -164,7 +164,7 @@ export default function EditExpenseForm({
           >
             {pending ? 'Saving...' : 'Save changes'}
           </Button>
-          <Button variant="outline" asChild className="h-11">
+          <Button variant="outline" asChild className="h-11 flex-1">
             <Link href="/expenses">Cancel</Link>
           </Button>
         </div>

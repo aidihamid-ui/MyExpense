@@ -23,15 +23,42 @@ export default function Nav() {
 
   return (
     <nav className="border-b bg-white shadow-sm">
-      <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2">
-        <span className="text-base font-bold text-primary tracking-tight">MyExpense</span>
-        <Separator orientation="vertical" className="h-5" />
-        <div className="flex gap-1">
+      <div className="mx-auto max-w-5xl px-4">
+        {/* Top row: brand (+ desktop links inline) + sign out */}
+        <div className="flex items-center py-2">
+          <span className="text-base font-bold text-primary tracking-tight">MyExpense</span>
+          {/* Desktop only: separator + nav links inline */}
+          <div className="hidden sm:flex items-center gap-3 ml-3">
+            <Separator orientation="vertical" className="h-5" />
+            <div className="flex gap-1">
+              {links.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex min-h-[44px] items-center rounded-lg px-3 text-sm font-medium transition-colors ${
+                    pathname.startsWith(href)
+                      ? 'bg-primary/10 text-primary'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}
+                >
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+          <div className="ml-auto">
+            <Button variant="ghost" size="sm" onClick={handleSignOut}>
+              Sign out
+            </Button>
+          </div>
+        </div>
+        {/* Mobile only: nav links as full-width tab strip */}
+        <div className="flex border-t sm:hidden">
           {links.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              className={`flex min-h-[44px] items-center rounded-lg px-3 text-sm font-medium transition-colors ${
+              className={`flex flex-1 items-center justify-center min-h-[44px] text-sm font-medium transition-colors ${
                 pathname.startsWith(href)
                   ? 'bg-primary/10 text-primary'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -40,11 +67,6 @@ export default function Nav() {
               {label}
             </Link>
           ))}
-        </div>
-        <div className="ml-auto">
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
-            Sign out
-          </Button>
         </div>
       </div>
     </nav>
