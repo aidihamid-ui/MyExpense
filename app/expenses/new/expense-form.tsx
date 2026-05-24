@@ -38,6 +38,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
     'idle',
   );
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [fileSelected, setFileSelected] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -115,7 +116,12 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         {/* Amount */}
         <div>
           <label htmlFor="amount" className="mb-1.5 block text-sm font-medium">
-            Amount (RM) <span className="text-destructive">*</span>
+            Amount (RM){' '}
+            {fileSelected ? (
+              <span className="text-muted-foreground text-xs font-normal">(from receipt)</span>
+            ) : (
+              <span className="text-destructive">*</span>
+            )}
           </label>
           <Input
             id="amount"
@@ -124,7 +130,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
             step="0.01"
             min="0.01"
             placeholder="0.00"
-            required
+            required={!fileSelected}
             className="h-11"
           />
           {state?.errors?.amount && (
@@ -224,6 +230,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
             type="file"
             accept="image/jpeg,image/png,image/webp,application/pdf"
             className="h-11 cursor-pointer file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-muted file:px-3 file:py-1 file:text-sm"
+            onChange={(e) => setFileSelected(!!e.target.files?.[0])}
           />
           {uploadStatus === 'uploading' && (
             <p className="mt-1 text-xs text-muted-foreground">Uploading receipt…</p>

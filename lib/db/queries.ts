@@ -368,9 +368,10 @@ export async function markOcrJobDone(
 }
 
 /**
- * Marks the job failed. If attempts >= 3, the job and receipt are permanently
- * failed. Otherwise, the job is rescheduled (status=pending) with a 30-second
- * backoff and attempts incremented.
+ * Marks the job failed. If attempts >= 2 (i.e. this is the 3rd and final
+ * attempt — claim query only allows attempts < 3, so max passed-in value is 2),
+ * the job and receipt are permanently failed. Otherwise, the job is rescheduled
+ * (status=pending) with a 30-second backoff and attempts incremented.
  */
 export async function markOcrJobFailed(
   jobId: string,
@@ -378,7 +379,7 @@ export async function markOcrJobFailed(
   error: string,
   attempts: number
 ) {
-  if (attempts >= 3) {
+  if (attempts >= 2) {
     await Promise.all([
       db
         .update(ocrJobs)
