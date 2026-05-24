@@ -2,9 +2,11 @@ import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
+import { z } from 'zod';
 import { getExpenses } from '@/lib/db/queries';
 import Nav from '@/components/nav';
 import DeleteExpenseButton from '@/components/delete-expense-button';
+import SearchBar from './search-bar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -26,6 +28,16 @@ const PAYMENT_LABELS: Record<string, string> = {
 
 const PAGE_SIZE = 20;
 
+const searchSchema = z.string().trim().max(200).catch('');
+
+function buildHref(page: number, q: string) {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (page > 1) params.set('page', String(page));
+  const qs = params.toString();
+  return `/expenses${qs ? `?${qs}` : ''}`;
+}
+
 export default async function ExpensesPage({
   searchParams,
 }: {
@@ -39,8 +51,9 @@ export default async function ExpensesPage({
   const sp = await searchParams;
   const pageStr = typeof sp.page === 'string' ? sp.page : '1';
   const page = Math.max(1, parseInt(pageStr, 10) || 1);
+  const q = searchSchema.parse(typeof sp.q === 'string' ? sp.q : '');
 
-  const rows = await getExpenses(session.user.id, { page, limit: PAGE_SIZE + 1 });
+  const rows = await getExpenses(session.user.id, { page, limit: PAGE_SIZE + 1, search: q });
   const hasNext = rows.length > PAGE_SIZE;
   const expenses = rows.slice(0, PAGE_SIZE);
 
@@ -55,13 +68,21 @@ export default async function ExpensesPage({
           </Button>
         </div>
 
+        <div className="mb-4">
+          <SearchBar defaultValue={q} />
+        </div>
+
         {expenses.length === 0 ? (
           <Card className="shadow-sm">
             <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-              <p className="text-muted-foreground">No expenses yet.</p>
-              <Button asChild variant="outline" className="h-11">
-                <Link href="/expenses/new">Add your first expense</Link>
-              </Button>
+              <p className="text-muted-foreground">
+                {q ? 'No expenses match your search.' : 'No expenses yet.'}
+              </p>
+              {!q && (
+                <Button asChild variant="outline" className="h-11">
+                  <Link href="/expenses/new">Add your first expense</Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -177,7 +198,7 @@ export default async function ExpensesPage({
               <div className="mt-6 flex items-center justify-between">
                 {page > 1 ? (
                   <Button asChild variant="outline" className="h-11">
-                    <Link href={`/expenses?page=${page - 1}`}>← Previous</Link>
+                    <Link href={buildHref(page - 1, q)}>← Previous</Link>
                   </Button>
                 ) : (
                   <span />
@@ -185,7 +206,7 @@ export default async function ExpensesPage({
                 <span className="text-sm text-muted-foreground">Page {page}</span>
                 {hasNext ? (
                   <Button asChild variant="outline" className="h-11">
-                    <Link href={`/expenses?page=${page + 1}`}>Next →</Link>
+                    <Link href={buildHref(page + 1, q)}>Next →</Link>
                   </Button>
                 ) : (
                   <span />

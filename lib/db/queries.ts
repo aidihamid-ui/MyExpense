@@ -6,7 +6,7 @@
 
 import { db } from '@/lib/db';
 import { categories, expenses, ocrJobs, receipts } from '@/lib/db/schema';
-import { and, count, desc, eq, gte, lt, lte, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, ilike, lt, lte, sql, sum } from 'drizzle-orm';
 
 // ── Categories ──────────────────────────────────────────────────────────────
 
@@ -25,9 +25,12 @@ export async function getExpenses(
     page = 1,
     limit = 20,
     sortBy: _sortBy = 'date', // only date-desc supported; param reserved for Phase 3+
-  }: { page?: number; limit?: number; sortBy?: string } = {}
+    search = '',
+  }: { page?: number; limit?: number; sortBy?: string; search?: string } = {}
 ) {
   const offset = (page - 1) * limit;
+  const searchFilter = search ? ilike(expenses.note, `%${search}%`) : undefined;
+
   return db
     .select({
       id: expenses.id,
@@ -44,7 +47,7 @@ export async function getExpenses(
     })
     .from(expenses)
     .leftJoin(categories, eq(expenses.categoryId, categories.id))
-    .where(eq(expenses.userId, userId))
+    .where(and(eq(expenses.userId, userId), searchFilter))
     .orderBy(desc(expenses.date))
     .limit(limit)
     .offset(offset);
