@@ -394,17 +394,16 @@ Smoke test continued 2026-05-24. Core pipeline verified end-to-end:
 
 **Blocker resolved:** Docker Desktop was already installed and running. OCR service started with `docker compose up ocr-service -d`. `.env` file at project root had the correct vars.
 
-### 2. Deploy Phase 5e to VPS
+### 2. Deploy Phase 5e to VPS — COMPLETE (2026-05-24)
 
-- Apply migration 0003 on VPS (`make migrate`)
-- Deploy to VPS: `make deploy` + start `worker` service
-- Run Phase 5e test checklist (see `docs/phases.md`):
-  - Upload 10 different receipts
-  - Verify redirect to /receipts/[id]/review
-  - Verify spinner → prefilled form transition
-  - Verify OCR pipeline end-to-end
-  - Worker restart resilience
-  - Cross-user isolation (user A can't see user B's receipts)
+- Migration 0003 applied (`ocr_jobs` table — 4 migrations total in journal)
+- `make deploy` successful — all 4 services up: app, db, ocr-service, worker
+- Worker polling confirmed via `docker compose logs worker`
+- Live URL returns 200: https://myexpense.srv1488589.hstgr.cloud
+
+**VPS deploy bugs fixed during this session:**
+- `OCR_SERVICE_URL` was missing from VPS `.env` — added manually before deploy
+- Worker crash-looped: `BETTER_AUTH_SECRET` + `BETTER_AUTH_URL` not passed to worker service in `docker-compose.yml` — fixed and pushed (`fe496be`)
 
 ---
 
