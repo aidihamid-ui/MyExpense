@@ -2,9 +2,9 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-05-23
+**Last updated:** 2026-05-24
 **Last session by:** Claude
-**Current phase:** Phase 5e COMPLETE — end-to-end OCR pipeline working.
+**Current phase:** Phase 6 Session B COMPLETE — settings page.
 
 ---
 
@@ -255,10 +255,51 @@ _docker-compose.yml changes:_
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
 
-### What's broken or incomplete
+#### Phase 6 Session B — COMPLETE (2026-05-24)
+
+_Commit `a353982`._
+
+_Settings page (`app/settings/`):_
+- `page.tsx` — Server Component: session guard, displays email, renders `ChangePasswordForm` + `DeleteAccountSection`
+- `change-password-form.tsx` — Client Component: `useActionState` + `changePasswordAction`; fields: current password, new password, confirm new password; field-level Zod errors + success banner
+- `delete-account.tsx` — Client Component: "Delete account" button → Dialog with typed confirmation (`DELETE`); confirm button gated on exact text match; calls `deleteAccountAction()` → on ok: `authClient.signOut()` + router push to `/login`
+
+_Server actions (`lib/actions/settings.ts`):_
+- `changePasswordAction(prevState, formData)` — Zod validates 3 fields + confirm match; session check; delegates to `auth.api.changePassword` (verifies current password internally); maps Better-Auth error messages ("Invalid password" → field error, "Password too short" → field error)
+- `deleteAccountAction()` — session check; calls `deleteUserData(userId)`; deletes physical receipt files (best-effort); returns `{ ok: true }`
+
+_Query layer (`lib/db/queries.ts`):_
+- `deleteUserData(userId)`: Drizzle transaction, safe cascade order — expenses → receipts (cascades ocrJobs) → categories → user (cascades sessions/accounts); returns `imagePaths[]` for filesystem cleanup
+- Added `user` to schema imports
+
+_Nav/proxy:_
+- `components/nav.tsx`: Settings link added to `links` array
+- `proxy.ts`: `/settings/:path*` added to protected matcher
+
+_Deleted:_ `app/dashboard/logout-button.tsx` (was unused since Phase 3)
+
+---
+
+### Phase 6 Session A — COMPLETE (2026-05-24)
+
+_Commit `fe7614f`._
+
+_Search (`app/expenses/`)_:
+- `search-bar.tsx` — Client Component: controlled `<Input>`, 300ms debounce via `useRef`+`setTimeout`, calls `router.push('/expenses?q=<term>')` on change, resets page to 1
+- `page.tsx` — reads `?q` from `searchParams`, Zod-validates (trim + max 200 chars, `.catch('')`), passes `search: q` to `getExpenses`, renders `<SearchBar>` between heading and list, pagination `<Link>` hrefs built via `buildHref(page, q)` to preserve `q` across pages
+- Empty-state message varies: "No expenses match your search." when `q` is set
+
+_Query layer (`lib/db/queries.ts`)_:
+- `getExpenses`: new `search?: string` option; when non-empty adds `ilike(expenses.note, '%term%')` inside the existing `and(eq(expenses.userId, userId), ...)` — multi-tenancy preserved, no raw SQL
+- Added `ilike` to drizzle-orm imports
+
+_Multi-tenancy:_ `userId` filter is unconditional in the outer `and()`; search filter is nested inside it. User A's search cannot touch User B's rows.
+
+---
+
+## What's broken or incomplete
 
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
-- `app/dashboard/logout-button.tsx` is now unused (Sign Out moved to Nav); can be deleted when convenient
 
 ### Phase 5a VPS verification — COMPLETE (2026-05-20)
 
@@ -293,7 +334,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `174641c` — [Phase 5e] fix: add OCR_SERVICE_URL to env.local and example, update docs gaps — [Phase 5e] feat: receipt review UI with OCR status polling
+- Last commit: `a353982` — [Phase 6] feat: settings page + change password + delete account
 
 ---
 
@@ -417,5 +458,4 @@ Smoke test continued 2026-05-24. Core pipeline verified end-to-end:
 - [x] Phase 5e browser smoke test — core pipeline verified 2026-05-24 ✓ (remaining: failure path, 10-receipt batch, multi-user)
 - [x] Create `.env` file at project root for `docker compose` — done ✓
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
-- [ ] ADR-013 revisit: 4 protected pages now — approaching the "5 pages" revisit trigger for route group layout
-- [ ] `app/dashboard/logout-button.tsx` is now unused — can delete
+- [ ] ADR-013 revisit: 5 protected pages now (dashboard, expenses, receipts, settings + settings sub-paths) — revisit trigger met; consider route group layout

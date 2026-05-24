@@ -1111,3 +1111,57 @@ The mismatch is a local-dev-only concern. Production runs both the worker and OC
 
 **Revisit trigger:**
 When the local dev worker is containerised (i.e., run via `docker compose` instead of bare-metal), this helper becomes unreachable and can be removed.
+
+---
+
+## ADR-033 — Expense search via URL param + server-side `ilike`
+
+**Date:** 2026-05-24
+**Status:** Accepted
+
+**Context:**
+Phase 6 adds search-by-note to the `/expenses` list. Three approaches were possible: (1) client-side filtering of the already-fetched page, (2) a dedicated `/api/search` route, or (3) a `?q=` URL param that the Server Component reads and passes to the existing `getExpenses` query.
+
+**Decision:**
+Option 3: `?q=` URL param, Zod-validated in the Server Component, passed as `search?: string` to `getExpenses`, which adds `ilike(expenses.note, '%term%')` inside the existing `and(eq(expenses.userId, userId), ...)` clause.
+
+**Reasoning:**
+- Search state lives in the URL — bookmarkable, shareable, works with browser back/forward.
+- Pagination (`?page=`) and search (`?q=`) compose naturally via `URLSearchParams`.
+- The Server Component already does the session check and data fetch — no extra round-trip.
+- `ilike` (case-insensitive LIKE) is a single Drizzle clause — no raw SQL, multi-tenancy preserved because `userId` filter is the unconditional outer `and()` condition.
+- The 300 ms debounce in `SearchBar` keeps round-trips low without any added complexity.
+
+**Trade-offs we accept:**
+- Full-text ranking (relevance ordering) is not provided. Acceptable for 6 users.
+- `ilike '%term%'` on a growing table is unindexed; at 6-user scale this is not a concern.
+
+**Revisit trigger:** If note/merchant columns grow to tens of thousands of rows or full-text ranking is needed, migrate to a PostgreSQL `tsvector` index with `to_tsquery`.
+
+---
+
+## ADR-034 — Account deletion: manual cascade order + filesystem cleanup
+
+**Date:** 2026-05-24
+**Status:** Accepted
+
+**Context:**
+Better-Auth provides a `deleteUser` endpoint but it requires `options.user.deleteUser.enabled = true` and optionally an email-verification step. Enabling it would also give Better-Auth full control of the deletion order, with no hook for cleaning up receipt files on disk before the rows are gone.
+
+**Decision:**
+Manual deletion in `deleteUserData(userId)` within a single Drizzle transaction:
+1. Collect `imagePath[]` from receipts **before** the transaction (can't read deleted rows).
+2. Transaction: `DELETE expenses` → `DELETE receipts` (cascades `ocrJobs`) → `DELETE categories` → `DELETE user` (cascades `sessions`, `accounts`).
+3. After transaction: `fs.unlink` each path, best-effort (never fails the action).
+
+**Reasoning:**
+- The explicit order avoids any ambiguity from simultaneous PostgreSQL CASCADE + SET NULL triggers (e.g., `expenses.categoryId → categories.id SET NULL` firing mid-cascade while expenses are being deleted).
+- Collecting paths before the transaction means we always have the list even if the file cleanup runs after the DB commit.
+- `fs.unlink` failures are swallowed — an orphaned file is less bad than a failed account deletion.
+- No extra config, no email verification step, no opt-in flag.
+
+**Trade-offs we accept:**
+- If `deleteUserData` succeeds but the process crashes before `fs.unlink`, receipt files become orphans. Acceptable at this scale.
+- Better-Auth's built-in `afterDelete` lifecycle hook is bypassed. We have no plugins that depend on it.
+
+**Revisit trigger:** If we add Better-Auth plugins that hook into user deletion (e.g., audit logs, billing), switch to enabling Better-Auth's `deleteUser` with a `beforeDelete` hook for file cleanup.

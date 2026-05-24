@@ -582,3 +582,56 @@ Client Component (review-client.tsx):
 
 **Expense form (shared):** Uses `useActionState` + `createExpenseAction`. `receiptId` is passed as a hidden `<input>`. The action now verifies receipt ownership before creating the expense (ADR-031).
 
+
+---
+
+## 26. Expense search (Phase 6+)
+
+**Rule:** Search state lives in `?q=` URL param. The Server Component reads and Zod-validates it, passes it to `getExpenses` as `search`. The query adds `ilike(expenses.note, '%term%')` inside the existing `and(eq(expenses.userId, userId), ...)` — multi-tenancy is never weakened. See ADR-033.
+
+**Files:** `app/expenses/page.tsx` (Server Component), `app/expenses/search-bar.tsx` (Client Component), `lib/db/queries.ts` → `getExpenses`
+
+**Data flow:**
+```
+User types in SearchBar
+  → debounce 300ms
+  → router.push('/expenses?q=<term>')   // resets page to 1
+  → Server Component re-renders
+  → Zod validates q (trim, max 200, catch '')
+  → getExpenses(userId, { search: q })
+  → ilike filter applied inside and(userId, ...)
+  → results returned
+```
+
+**Pagination:** `buildHref(page, q)` in `page.tsx` always includes `?q=` in prev/next links so search is preserved across pages.
+
+**Empty state:** Shows "No expenses match your search." when `q` is set and results are empty (vs "No expenses yet." when unfiltered and empty).
+
+---
+
+## 27. Settings actions (Phase 6+)
+
+**Files:** `lib/actions/settings.ts`, `app/settings/page.tsx`, `app/settings/change-password-form.tsx`, `app/settings/delete-account.tsx`
+
+### changePasswordAction
+
+**Rule:** Form-based server action (`useActionState`). Zod validates three fields (currentPassword min 1, newPassword min 8, confirmNewPassword must equal newPassword). Then delegates to `auth.api.changePassword({ headers, body: { currentPassword, newPassword, revokeOtherSessions: false } })` — Better-Auth verifies the current password hash internally.
+
+**Error mapping:**
+| Better-Auth `err.message` | Returned field error |
+|---|---|
+| `"Invalid password"` | `errors.currentPassword` |
+| `"Password too short"` | `errors.newPassword` |
+| anything else | `general` message |
+
+### deleteAccountAction
+
+**Rule:** Called directly from a client event handler (not via form action). Requires typed confirmation `DELETE` in the UI before calling. The action: (1) session check, (2) `deleteUserData(userId)` → transaction deletes in FK-safe order + returns `imagePaths[]`, (3) `fs.unlink` each path best-effort. On `{ ok: true }`, client calls `authClient.signOut()` then redirects to `/login`. See ADR-034 for cascade order rationale.
+
+**deleteUserData transaction order:**
+```
+DELETE expenses WHERE userId        -- eliminates SET NULL side-effects on categoryId/receiptId
+DELETE receipts WHERE userId        -- cascades → ocrJobs
+DELETE categories WHERE userId      -- safe: no remaining expenses to SET NULL
+DELETE user WHERE id                -- cascades → sessions, accounts
+```
