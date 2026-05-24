@@ -1081,3 +1081,33 @@ The server action is the natural integration point — it has the session user I
 
 **Revisit trigger:**
 If expense creation throughput becomes a concern (unlikely at 6 users), consider moving the check to the query layer or using a DB-level constraint.
+
+
+---
+
+## ADR-032 — Worker path translation for Windows dev + Docker OCR
+
+**Date:** 2026-05-24
+**Status:** Accepted
+
+**Context:**
+In local dev the Next.js app runs bare-metal on Windows and stores receipt `imagePath` values using Node's `path.join`, which produces Windows-style relative paths (`var\receipts\userId\file.jpg`). The OCR worker also runs bare-metal and sends this path to the OCR service, which runs inside Docker (Linux). Inside the container, `os.path.realpath()` treats backslashes as literal characters (not separators), so the path never resolves within `STORAGE_REAL` and OCR fails with 404/400.
+
+**Options considered:**
+
+1. **Fix at upload (store Docker-compatible paths)** — Change `uploadReceiptAction` to store paths in Linux format. Breaks file serving on Windows (Node reads files using OS paths).
+2. **Fix at the OCR service (accept Windows paths)** — Add platform-aware path handling in Python. Fragile; the container is always Linux.
+3. **Fix in the worker (translate before sending)** — Add a `toOcrPath()` helper in `lib/worker.ts` that converts Windows absolute paths to Docker-compatible Linux paths (`C:\...` → `/c/...`). No-op on Linux (production Docker worker). Minimal, isolated, reversible.
+
+**Decision:**
+Option 3: `toOcrPath()` in `lib/worker.ts`, guarded by `process.platform !== 'win32'`.
+
+**Reasoning:**
+The mismatch is a local-dev-only concern. Production runs both the worker and OCR service in Docker on Linux — paths are already consistent. The translation is a one-liner conversion (drive letter → `/x/`, backslashes → forward slashes), localised to the single caller, and has zero impact on any other code path.
+
+**Trade-offs we accept:**
+- If the project structure ever moves (e.g., receipts stored on a UNC path `\server\share\...`), the conversion will need updating.
+- The imagePath stored in the DB remains Windows-relative — not ideal but acceptable until production Docker normalises it.
+
+**Revisit trigger:**
+When the local dev worker is containerised (i.e., run via `docker compose` instead of bare-metal), this helper becomes unreachable and can be removed.

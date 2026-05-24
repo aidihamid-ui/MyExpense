@@ -372,22 +372,26 @@ Tests listed in `docs/phases.md` — **ALL PASSED** (verified 2026-05-19):
 
 ### 1. Complete local smoke test (in progress)
 
-Smoke test begun 2026-05-23. What's been verified so far:
+Smoke test continued 2026-05-24. Core pipeline verified end-to-end:
 
 - [x] Dev server starts clean (signup, login work)
 - [x] Receipt upload → `createOcrJobAction` → redirect to `/receipts/[id]/review`
 - [x] Review page polls `checkReceiptStatusAction` correctly
-- [x] Worker script (`node_modules/tsx/dist/cli.cjs lib/worker.ts`) picks up jobs and logs them
-- [ ] OCR service processes jobs (blocked: needs Docker Desktop)
+- [x] Worker picks up jobs and logs them
+- [x] OCR service (Docker) processes jobs — PaddleOCR extracts text correctly
+- [x] Review page transitions from spinner → prefilled form
+- [x] Expense saves with `receiptId` linked (confirmed via DB)
+- [ ] `?warning=ocr_failed` path (kill OCR service mid-upload, verify FailedView)
+- [ ] Upload 10 different receipt types (crumpled, thermal, Malay-only, mixed) — 2 tested so far:
+  - Receipt 1 (NYONYA COLORS): total ✓, date ✓, merchant ✓
+  - Receipt 2 (faded thermal): total ✗ (faded ink, parser returned null — expected), date ✓, merchant ✓
+- [ ] Worker survives OCR service restart (retry logic)
+- [ ] Two users uploading simultaneously — jobs don't cross
+- [ ] Cross-user isolation — user A can't access user B's review page
 
-**Blocker:** PaddleOCR requires Python 3.11, not installed. Docker Desktop 4.73.0 installed via winget but requires system restart for CLI to be available. Once Docker is running:
+**Bug fixed (2026-05-24):** Worker sent Windows-style relative paths (`var\receipts\...`) to the Docker OCR service, which expects Linux absolute paths (`/c/Users/.../var/receipts/...`). Fixed in `lib/worker.ts` via `toOcrPath()` — converts Windows paths to Docker-compatible paths on `win32` only; no-op on Linux (production). See ADR-032.
 
-```bash
-# From project root — Docker Compose needs STORAGE_PATH and OCR_SECRET in a .env file
-docker compose up ocr-service -d
-```
-
-Then the worker (already running) will pick up the pending job, process it, and the review page will transition from spinner to prefilled form.
+**Blocker resolved:** Docker Desktop was already installed and running. OCR service started with `docker compose up ocr-service -d`. `.env` file at project root had the correct vars.
 
 ### 2. Deploy Phase 5e to VPS
 
@@ -410,8 +414,8 @@ Then the worker (already running) will pick up the pending job, process it, and 
 - [x] Phase 5a complete locally ✓ (2026-05-20)
 - [x] Phase 5a verified on VPS ✓ (2026-05-20) — all 5 tests passed
 - [ ] Manual browser test checklist for Phase 4 (5 formats, .exe rejection, 10MB rejection)
-- [ ] Phase 5e browser smoke test (upload receipt, verify review page, OCR pipeline) — **in progress, blocked on Docker Desktop restart**
-- [ ] Create `.env` file at project root for `docker compose` (copy vars from `.env.local` + set `STORAGE_PATH` to absolute path)
+- [x] Phase 5e browser smoke test — core pipeline verified 2026-05-24 ✓ (remaining: failure path, 10-receipt batch, multi-user)
+- [x] Create `.env` file at project root for `docker compose` — done ✓
 - [ ] Set up backup cron on VPS (`Docs/deployment.md` → Automated daily backup)
 - [ ] ADR-013 revisit: 4 protected pages now — approaching the "5 pages" revisit trigger for route group layout
 - [ ] `app/dashboard/logout-button.tsx` is now unused — can delete

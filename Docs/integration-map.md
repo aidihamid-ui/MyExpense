@@ -353,9 +353,12 @@ pending → [claim] → processing → [success] → done
 
 **Run worker locally:**
 ```bash
-node --env-file=.env.local node_modules/.bin/tsx lib/worker.ts
-# or: npm run worker  (requires DATABASE_URL etc. already in env)
+node --env-file=.env.local node_modules/tsx/dist/cli.cjs lib/worker.ts
 ```
+
+> **Note:** Use `node_modules/tsx/dist/cli.cjs` directly, not `node_modules/.bin/tsx`. The `.bin/tsx` entry is a bash shim — Node on Windows executes it as JavaScript and throws a syntax error (same issue as drizzle-kit, see §10).
+
+> **Windows + Docker path translation (ADR-032):** In local dev the worker runs bare-metal on Windows but the OCR service runs in Docker (Linux). `toOcrPath()` in `lib/worker.ts` converts the stored Windows relative path (`var\receipts\...`) to the Linux absolute path the Docker container expects (`/c/Users/.../var/receipts/...`). No-op in production (worker runs in Docker on Linux).
 
 **Migration:** `lib/db/migrations/0003_misty_emma_frost.sql` — must be applied before starting the worker.
 

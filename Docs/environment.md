@@ -161,20 +161,34 @@ npm run dev
 
 ## Quick Session Start
 
-A normal local session needs all three running. In order:
+A normal local session needs all four running. In order:
 
-1. **Terminal 1 — Postgres:** `pg_ctl ... start` (skip if registered as service)
-2. **Terminal 2 — OCR sidecar:** `cd ocr-service && venv/Scripts/uvicorn ...`
+1. **Terminal 1 — Postgres:** `pg_ctl ... start` (skip if registered as Windows service — see below)
+2. **Terminal 2 — OCR sidecar (Docker):** `docker compose up ocr-service -d` (runs detached; Docker Desktop must be open)
 3. **Terminal 3 — Next.js:** `npm run dev`
+4. **Terminal 4 — Worker:** `node --env-file=.env.local node_modules/tsx/dist/cli.cjs lib/worker.ts`
 
-Then verify all three respond:
+Then verify all respond:
 ```bash
 psql -U myexpense -d myexpense_dev -c "select 1;"               # → returns row
-curl http://127.0.0.1:8001/health                                # → {"status":"ok"}
+curl http://localhost:8001/health                                # → {"status":"ok"}
 curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000   # → 200
+# Worker terminal should print: [worker] started, polling every 5s
 ```
 
-If any of those three fails, fix it before writing code.
+If any of those fails, fix it before writing code.
+
+### Registering Postgres as a Windows service (one-time, run as Administrator)
+
+So Postgres starts automatically and never needs manual starting:
+
+```powershell
+# Elevated PowerShell only
+pg_ctl register -N PostgreSQL -D C:\Users\aidih\scoop\apps\postgresql17\current\data
+net start PostgreSQL
+```
+
+After this, skip step 1 above entirely.
 
 ---
 
