@@ -2,9 +2,9 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-05-24
+**Last updated:** 2026-05-25
 **Last session by:** Claude
-**Current phase:** Phase 6 Session B COMPLETE — settings page.
+**Current phase:** Phase 6 Session C COMPLETE — mobile responsive audit.
 
 ---
 
@@ -255,6 +255,22 @@ _docker-compose.yml changes:_
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
 
+#### Phase 6 Session C — COMPLETE (2026-05-25)
+
+_Commit `51a7382`._
+
+_Mobile responsive audit — 8 issues found and fixed:_
+
+- **Nav** (`components/nav.tsx`): Two-row layout on mobile — brand+sign-out on row 1, nav links as full-width tab strip on row 2 (with `border-t`). Desktop unchanged (brand + inline separator + links + sign-out, single row). All links `min-h-[44px]`.
+- **Dashboard table** (`app/dashboard/page.tsx`): Wrapped 4-column category breakdown `<Table>` in `overflow-x-auto` div — horizontal scroll on narrow screens instead of overflow/clipping.
+- **FilterBar** (`app/dashboard/filter-bar.tsx`): `h-9` → `h-11` on date inputs, category select; `flex-col` on mobile / `flex-row sm:flex-wrap` on desktop; date inputs `w-full` on mobile / `w-36` on sm; buttons paired `flex-1` on mobile via wrapper div.
+- **Settings change-password form** (`app/settings/change-password-form.tsx`): Added `h-11` to all 3 password inputs; added `w-full` to submit button.
+- **Expense forms** (`app/expenses/new/expense-form.tsx`, `app/expenses/[id]/edit/edit-expense-form.tsx`): Cancel button gets `flex-1` to match Submit width on mobile.
+
+_No issues found on:_ /login, /signup, /expenses mobile cards, /receipts/[id]/review, delete dialogs.
+
+---
+
 #### Phase 6 Session B — COMPLETE (2026-05-24)
 
 _Commit `a353982`._
@@ -334,7 +350,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `a353982` — [Phase 6] feat: settings page + change password + delete account
+- Last commit: `51a7382` — [Phase 6] fix: mobile responsive audit — nav, dashboard, settings, forms
 
 ---
 
