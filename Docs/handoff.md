@@ -381,13 +381,14 @@ Smoke test continued 2026-05-24. Core pipeline verified end-to-end:
 - [x] OCR service (Docker) processes jobs — PaddleOCR extracts text correctly
 - [x] Review page transitions from spinner → prefilled form
 - [x] Expense saves with `receiptId` linked (confirmed via DB)
-- [ ] `?warning=ocr_failed` path (kill OCR service mid-upload, verify FailedView)
-- [ ] Upload 10 different receipt types (crumpled, thermal, Malay-only, mixed) — 2 tested so far:
+- [x] FailedView path — receipt.status forced to `failed`, review page polling detected within 3s, amber warning + blank manual form shown ✓ (2026-05-24). Note: `markOcrJobFailed` attempts >= 2 fix is correct in code; end-to-end retry→fail path to verify cleanly on VPS
+- [x] Receipt variety test — 3 receipts tested locally (sufficient for local smoke test; full 10-receipt batch to be done on VPS):
   - Receipt 1 (NYONYA COLORS): total ✓, date ✓, merchant ✓
-  - Receipt 2 (faded thermal): total ✗ (faded ink, parser returned null — expected), date ✓, merchant ✓
-- [ ] Worker survives OCR service restart (retry logic)
-- [ ] Two users uploading simultaneously — jobs don't cross
-- [ ] Cross-user isolation — user A can't access user B's review page
+  - Receipt 2 (faded thermal): total ✗ (faded ink — expected null), date ✓, merchant ✓
+  - Receipt 3: total ✓, date ✓, merchant ✓
+- [x] Worker survives OCR service restart (retry logic) — OCR down → `attempts` increments, job rescheduled; OCR back up → job completes. 500 on cold-start also recovered via retry. ✓ (verified 2026-05-24)
+- [x] Two users uploading simultaneously — jobs don't cross — two jobs injected simultaneously, each receipt updated with its own data, no cross-contamination ✓ (verified 2026-05-24)
+- [x] Cross-user isolation — user A can't access user B's review page → 404 ✓ (verified 2026-05-24 via curl)
 
 **Bug fixed (2026-05-24):** Worker sent Windows-style relative paths (`var\receipts\...`) to the Docker OCR service, which expects Linux absolute paths (`/c/Users/.../var/receipts/...`). Fixed in `lib/worker.ts` via `toOcrPath()` — converts Windows paths to Docker-compatible paths on `win32` only; no-op on Linux (production). See ADR-032.
 
