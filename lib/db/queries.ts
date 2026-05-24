@@ -5,7 +5,7 @@
  */
 
 import { db } from '@/lib/db';
-import { categories, expenses, ocrJobs, receipts } from '@/lib/db/schema';
+import { categories, expenses, ocrJobs, receipts, user } from '@/lib/db/schema';
 import { and, count, desc, eq, gte, ilike, lt, lte, sql, sum } from 'drizzle-orm';
 
 // ── Categories ──────────────────────────────────────────────────────────────
@@ -266,6 +266,30 @@ export async function getFilteredExpenseSummary(
 
 // getUserCategories re-uses getCategories (per-user, ADR-010 compliant)
 export const getUserCategories = getCategories;
+
+// ── Account Deletion ─────────────────────────────────────────────────────────
+
+/**
+ * Deletes all data for a user in safe cascade order, then deletes the user row.
+ * Returns the list of receipt file paths so the caller can clean up the filesystem.
+ * Order: expenses → receipts (cascades ocrJobs) → categories → user (cascades sessions/accounts)
+ */
+export async function deleteUserData(userId: string): Promise<string[]> {
+  const receiptRows = await db
+    .select({ imagePath: receipts.imagePath })
+    .from(receipts)
+    .where(eq(receipts.userId, userId));
+  const imagePaths = receiptRows.map((r) => r.imagePath);
+
+  await db.transaction(async (tx) => {
+    await tx.delete(expenses).where(eq(expenses.userId, userId));
+    await tx.delete(receipts).where(eq(receipts.userId, userId)); // cascades → ocrJobs
+    await tx.delete(categories).where(eq(categories.userId, userId));
+    await tx.delete(user).where(eq(user.id, userId)); // cascades → sessions, accounts
+  });
+
+  return imagePaths;
+}
 
 // ── Receipts ─────────────────────────────────────────────────────────────────
 
