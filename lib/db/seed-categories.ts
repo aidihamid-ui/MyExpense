@@ -9,6 +9,8 @@ const DEFAULT_CATEGORIES = [
   'Utilities',
   'Entertainment',
   'Healthcare',
+  'Travel',
+  'Home Care',
   'Other',
 ] as const;
 
