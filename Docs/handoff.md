@@ -371,6 +371,10 @@ _Multi-tenancy:_ `userId` filter is unconditional in the outer `and()`; search f
 
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
 
+### Post-v1.0 deploy fix (2026-05-25)
+
+`OCR_SERVICE_URL` was missing from the `app` service environment block in `docker-compose.yml`. `lib/env.ts` requires it (`z.url()`), so the app threw a ZodError on every request — signup/login broken. Worker had it; app didn't. Fixed in `b5638c2`, deployed immediately without a full rebuild (just `--force-recreate app`).
+
 ### Phase 5a VPS verification — COMPLETE (2026-05-20)
 
 All 5 tests passed via `docker compose exec app sh`:
@@ -404,7 +408,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v1.0-production`
-- Last commit: `4a82778` — [Phase 6] feat: Sentry error tracking + README
+- Last commit: `b5638c2` — [Phase 6] fix: pass OCR_SERVICE_URL to app container in docker-compose
 
 ---
 
