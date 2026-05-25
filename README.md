@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MyExpense
 
-## Getting Started
+Self-hosted expense tracker for up to 6 users. Manual entry + receipt OCR via PaddleOCR. Built for personal/family use — not a SaaS product.
 
-First, run the development server:
+**Live:** https://myexpense.srv1488589.hstgr.cloud
+
+---
+
+## What it does
+
+- Track expenses by category, payment method, date, and note
+- Upload receipt photos — PaddleOCR extracts the total, date, and merchant automatically
+- Dashboard with monthly totals, last-30-days, and category breakdown
+- Filter by date range and category; search expenses by note
+- Export all expenses to CSV
+- Settings: change password, delete account
+- Multi-user: up to 6 accounts, full data isolation between users
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 16 (App Router, Server Actions, TypeScript strict) |
+| Database | PostgreSQL 17 + Drizzle ORM |
+| Auth | Better-Auth (email/password) |
+| OCR | PaddleOCR via Python FastAPI sidecar |
+| UI | Tailwind CSS 4 + shadcn/ui |
+| Error tracking | Sentry |
+| Production | Docker Compose + Traefik + Let's Encrypt on Hostinger VPS |
+
+---
+
+## Run locally
+
+You need: Node 24, PostgreSQL 17, Docker Desktop (for the OCR sidecar).
+
+### 1. Clone and install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/aidihamid-ui/MyExpense.git
+cd MyExpense
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Configure environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+cp .env.example .env.local
+# Edit .env.local — fill in all required variables (see table below)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Set up the database
 
-## Learn More
+```bash
+# Create role and DB (run in psql as postgres superuser):
+CREATE ROLE myexpense WITH LOGIN PASSWORD 'yourpassword';
+CREATE DATABASE myexpense_dev OWNER myexpense;
 
-To learn more about Next.js, take a look at the following resources:
+# Apply migrations:
+npm run db:migrate
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 4. Start all four processes (separate terminals)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# Terminal 1 — PostgreSQL (skip if running as a system service)
+pg_ctl -D /path/to/data -l /path/to/pg.log start
 
-## Deploy on Vercel
+# Terminal 2 — OCR sidecar (Docker Desktop must be running)
+docker compose up ocr-service -d
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+# Terminal 3 — Next.js dev server
+npm run dev
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Terminal 4 — OCR background worker
+npm run worker
+```
+
+App runs at `http://localhost:3000`.
+
+---
+
+## Deploy
+
+Production runs as four Docker Compose services (`app`, `db`, `ocr-service`, `worker`). Traefik handles HTTPS and Let's Encrypt.
+
+Full runbook: [`Docs/deployment.md`](Docs/deployment.md)
+
+---
+
+## Environment variables
+
+See [`.env.example`](.env.example) for the full list. Required:
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `BETTER_AUTH_SECRET` | Auth signing secret (min 32 chars) |
+| `BETTER_AUTH_URL` | App base URL (e.g. `https://yourdomain.com`) |
+| `STORAGE_PATH` | Directory where receipt files are stored |
+| `OCR_SERVICE_URL` | URL of the PaddleOCR FastAPI sidecar |
+| `OCR_SECRET` | Shared secret between app and OCR service |
+
+Optional:
+
+| Variable | Purpose |
+|---|---|
+| `SENTRY_DSN` | Sentry error tracking DSN (app works without it) |
+
+---
+
+## Not open for contributions
+
+This is a personal project. I'm not accepting pull requests or feature requests.
