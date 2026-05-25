@@ -63,9 +63,14 @@ export default async function ExpensesPage({
       <main className="mx-auto max-w-5xl px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Expenses</h1>
-          <Button asChild className="h-11 px-5">
-            <Link href="/expenses/new">Add expense</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button asChild variant="outline" className="h-11 px-5">
+              <a href="/api/expenses/export">Export CSV</a>
+            </Button>
+            <Button asChild className="h-11 px-5">
+              <Link href="/expenses/new">Add expense</Link>
+            </Button>
+          </div>
         </div>
 
         <div className="mb-4">

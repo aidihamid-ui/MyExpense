@@ -53,6 +53,21 @@ export async function getExpenses(
     .offset(offset);
 }
 
+export async function getAllExpensesForExport(userId: string) {
+  return db
+    .select({
+      date: expenses.date,
+      amount: expenses.amount,
+      categoryName: categories.name,
+      note: expenses.note,
+      paymentMethod: expenses.paymentMethod,
+    })
+    .from(expenses)
+    .leftJoin(categories, eq(expenses.categoryId, categories.id))
+    .where(eq(expenses.userId, userId))
+    .orderBy(desc(expenses.date));
+}
+
 export async function getExpenseById(userId: string, expenseId: string) {
   const [row] = await db
     .select({
