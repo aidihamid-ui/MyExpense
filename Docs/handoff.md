@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-25
 **Last session by:** Claude
-**Current phase:** Phase 6 COMPLETE — Sentry + README. v1.0 tagged.
+**Current phase:** Phase 6 COMPLETE — v1.0 live and stable.
 
 ---
 
@@ -370,10 +370,20 @@ _Multi-tenancy:_ `userId` filter is unconditional in the outer `and()`; search f
 ## What's broken or incomplete
 
 - Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
+- `user-a@test.com` has no expenses — test account only, safe to ignore or delete
 
-### Post-v1.0 deploy fix (2026-05-25)
+### Post-v1.0 fixes (2026-05-25)
 
-`OCR_SERVICE_URL` was missing from the `app` service environment block in `docker-compose.yml`. `lib/env.ts` requires it (`z.url()`), so the app threw a ZodError on every request — signup/login broken. Worker had it; app didn't. Fixed in `b5638c2`, deployed immediately without a full rebuild (just `--force-recreate app`).
+**`OCR_SERVICE_URL` missing from app container (`b5638c2`):**
+`lib/env.ts` requires it (`z.url()`), so every request crashed with ZodError — signup/login broken. Worker had it in its env block; app service did not. Fixed in `docker-compose.yml`, deployed with `--force-recreate app` (no rebuild needed).
+
+**Category dropdown appeared broken — data fix, not code:**
+Two accounts (`aidi.hamid@yahoo.com.my`, `user-a@test.com`) were created during the ZodError crash window so `seedDefaultCategories` never ran for them. Fixed via direct SQL INSERT on VPS — no code changed.
+
+**Travel and Home Care added to default categories (`96199ca`):**
+Added to `lib/db/seed-categories.ts` (future signups get 9 categories). Seeded directly to all 3 existing VPS accounts via SQL. Deployed via `make deploy`.
+
+- Last commit: `96199ca` — [Phase 6] feat: add Travel and Home Care to default categories
 
 ### Phase 5a VPS verification — COMPLETE (2026-05-20)
 
@@ -408,7 +418,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v1.0-production`
-- Last commit: `b5638c2` — [Phase 6] fix: pass OCR_SERVICE_URL to app container in docker-compose
+- Last commit: `96199ca` — [Phase 6] feat: add Travel and Home Care to default categories
 
 ---
 
