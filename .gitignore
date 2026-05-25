@@ -55,3 +55,6 @@ ocr-service/venv/
 ocr-service/__pycache__/
 *.pyc
 *.pyo
+
+# Sentry Config File
+.env.sentry-build-plugin
