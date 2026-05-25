@@ -23,6 +23,7 @@ services:
       BETTER_AUTH_URL:    ${BETTER_AUTH_URL}
       STORAGE_PATH:       ${STORAGE_PATH}
       OCR_SECRET:         ${OCR_SECRET}
+      OCR_SERVICE_URL:    ${OCR_SERVICE_URL:-http://ocr-service:8001}
       OCR_PROVIDER:       ${OCR_PROVIDER:-paddle}
       NODE_ENV:           production
       NEXT_TELEMETRY_DISABLED: "1"
