@@ -9,6 +9,7 @@ const envSchema = z.object({
   OCR_SERVICE_URL: z.url(),
   OCR_SECRET: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  SENTRY_DSN: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
