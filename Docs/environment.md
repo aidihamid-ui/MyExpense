@@ -194,6 +194,14 @@ After this, skip step 1 above entirely.
 
 ## Troubleshooting
 
+**Can't log in / blank error on login after PC restart**
+PostgreSQL is not running — it does not survive reboots unless registered as a Windows service. Start it manually:
+```bash
+export PATH="$HOME/scoop/apps/postgresql17/current/bin:$PATH"
+pg_ctl -D ~/scoop/apps/postgresql17/current/data -l ~/scoop/apps/postgresql17/current/data/pg.log start
+```
+To never see this again, register it as a Windows service (see "Registering Postgres as a Windows service" above).
+
 **`psql: error: connection to server ... refused`**
 Postgres not started. Run the `pg_ctl ... start` command. If it says "another server might be running," check `netstat -ano | findstr :5432`.
 
