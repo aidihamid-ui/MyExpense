@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-25
 **Last session by:** Claude
-**Current phase:** Phase 6 Session D COMPLETE — CSV export.
+**Current phase:** Phase 6 COMPLETE — Sentry + README. v1.0 tagged.
 
 ---
 
@@ -255,6 +255,26 @@ _docker-compose.yml changes:_
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
 
+#### Phase 6 Session E — COMPLETE (2026-05-25)
+
+_Commits `f93a49c`, `523fb22`, `3bd8c7b`, `4a82778`._
+
+_Sentry error tracking + README. No schema changes, no new DB queries._
+
+_Sentry (`@sentry/nextjs@^10.53.1`):_
+- Wizard generated: `instrumentation.ts`, `instrumentation-client.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`, `app/global-error.tsx`, `next.config.ts` (`withSentryConfig` wrapper)
+- `SENTRY_AUTH_TOKEN` stays in `.env.sentry-build-plugin` (gitignored — wizard added the rule); never committed
+- `lib/env.ts`: `SENTRY_DSN: z.string().optional()` — app boots without it (ADR-035)
+- `.env.example`: `SENTRY_DSN=` placeholder; `.env.local`: DSN set (gitignored)
+- Verified: `SentryExampleFrontendError` + `SentryExampleAPIError` both appeared in Sentry dashboard within seconds of triggering
+- Example pages removed after verification
+
+_README.md:_ Full rewrite replacing `create-next-app` boilerplate — what it does, tech stack, 4-terminal local setup, deploy reference, env var table, not-open-for-contributions note.
+
+_ADR-035:_ `SENTRY_DSN` optional in env schema — Sentry is observability, not app logic; missing DSN degrades monitoring, not functionality.
+
+---
+
 #### Phase 6 Session D — COMPLETE (2026-05-25)
 
 _Commit `4a45efb`._
@@ -383,8 +403,8 @@ All 5 tests passed via `docker compose exec app sh`:
 ### Last known-good git state
 
 - Branch: master
-- Last tag: `v0.4-uploads-done`
-- Last commit: `4a45efb` — [Phase 6] feat: CSV export — GET /api/expenses/export + Export CSV button
+- Last tag: `v1.0-production`
+- Last commit: `4a82778` — [Phase 6] feat: Sentry error tracking + README
 
 ---
 

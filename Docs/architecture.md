@@ -1165,3 +1165,30 @@ Manual deletion in `deleteUserData(userId)` within a single Drizzle transaction:
 - Better-Auth's built-in `afterDelete` lifecycle hook is bypassed. We have no plugins that depend on it.
 
 **Revisit trigger:** If we add Better-Auth plugins that hook into user deletion (e.g., audit logs, billing), switch to enabling Better-Auth's `deleteUser` with a `beforeDelete` hook for file cleanup.
+
+---
+
+### ADR-035: Sentry DSN is optional in env schema — app boots without it
+
+**Date:** 2026-05-25
+**Status:** Accepted
+**Phase:** Phase 6
+
+**Context:**
+Sentry error tracking was added in Phase 6. The DSN must be configured for errors to be captured. The question is whether a missing DSN should be a hard boot failure (required env var) or a soft degradation (optional — Sentry simply stays disabled).
+
+**Options considered:**
+1. **Required** (`z.url()`) — guarantees Sentry is always configured; boot fails loudly if DSN is missing. Risk: blocks local dev setups that don't have a Sentry account, or future contributors who haven't configured it.
+2. **Optional** (`z.string().optional()`) — app boots without it; Sentry SDK silently no-ops when DSN is absent. Monitoring is degraded but the app is fully functional.
+
+**Decision:**
+Option 2: `SENTRY_DSN: z.string().optional()`.
+
+**Reasoning:**
+Sentry is observability infrastructure, not application logic. A missing DSN means less visibility into errors — it does not break any user-facing feature. Making it required would break `npm run dev` for anyone who hasn't set up Sentry, which is bad developer experience for a self-hosted personal project. The Sentry SDK already handles a missing DSN gracefully (it no-ops).
+
+**Trade-offs we accept:**
+- It is possible to run production without Sentry configured. No runtime warning is emitted.
+- `SENTRY_AUTH_TOKEN` is kept exclusively in `.env.sentry-build-plugin` (gitignored) — never in source or committed env files. This is enforced by `.gitignore`, not by the Zod schema.
+
+**Revisit trigger:** Never — this is appropriate for the project's scale and audience.
