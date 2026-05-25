@@ -635,3 +635,25 @@ DELETE receipts WHERE userId        -- cascades → ocrJobs
 DELETE categories WHERE userId      -- safe: no remaining expenses to SET NULL
 DELETE user WHERE id                -- cascades → sessions, accounts
 ```
+
+---
+
+## 28. CSV export route (Phase 6+)
+
+**Rule:** `GET /api/expenses/export` is a route handler (not a server action). It checks session via `auth.api.getSession` (same as every protected Server Component — §1), calls `getAllExpensesForExport(userId)` from `lib/db/queries.ts`, builds RFC-4180 CSV with plain string joining, and returns a `Response` with `Content-Disposition: attachment`. Never accept `userId` from query params — always from the verified session.
+
+**File:** `app/api/expenses/export/route.ts`
+
+**Response headers:**
+```
+Content-Type: text/csv; charset=utf-8
+Content-Disposition: attachment; filename="myexpense-YYYY-MM-DD.csv"
+```
+
+**CSV format:**
+- Header row: `"Date","Amount","Category","Note","Payment Method"`
+- Each value double-quoted; internal `"` escaped as `""`
+- Lines separated by CRLF (`\r\n`) — RFC-4180 compliant
+- Amount formatted as `toFixed(2)`; empty category → empty string
+
+**UI trigger:** Plain `<a href="/api/expenses/export">` anchor on `/expenses` page — browser follows and downloads. No JavaScript required.
