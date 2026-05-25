@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-05-25
 **Last session by:** Claude
-**Current phase:** Phase 6 Session C COMPLETE — mobile responsive audit.
+**Current phase:** Phase 6 Session D COMPLETE — CSV export.
 
 ---
 
@@ -255,6 +255,30 @@ _docker-compose.yml changes:_
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
 
+#### Phase 6 Session D — COMPLETE (2026-05-25)
+
+_Commit `4a45efb`._
+
+_CSV export — no new dependencies, no schema changes._
+
+_Query (`lib/db/queries.ts`):_
+- `getAllExpensesForExport(userId)` — fetches all expenses (no limit/offset) with category left-join; selects date, amount, categoryName, note, paymentMethod; filtered by `eq(expenses.userId, userId)`; ordered by date desc
+
+_Route (`app/api/expenses/export/route.ts`):_
+- `GET` handler — session check via `auth.api.getSession` → redirect `/login` if unauthenticated
+- Calls `getAllExpensesForExport(session.user.id)` — userId from session only, never from query params
+- Builds RFC-4180 CSV: double-quote wrapping, `""` escaping for internal quotes, CRLF line endings
+- Headers: `Date, Amount, Category, Note, Payment Method`
+- Response: `Content-Type: text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="myexpense-YYYY-MM-DD.csv"`
+
+_UI (`app/expenses/page.tsx`):_
+- "Export CSV" anchor-button (`variant="outline"`, `h-11 px-5`) added alongside "Add expense" in heading row
+- Simple `<a href="/api/expenses/export">` — browser follows and triggers download
+
+_Multi-tenancy:_ Route reads `userId` exclusively from verified session; query filters by it unconditionally. Confirmed by code — user A's session cannot produce user B's rows.
+
+---
+
 #### Phase 6 Session C — COMPLETE (2026-05-25)
 
 _Commit `51a7382`._
@@ -360,7 +384,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `056937f` — [Phase 6] fix: allow LAN IP in Next.js allowedDevOrigins for phone testing
+- Last commit: `4a45efb` — [Phase 6] feat: CSV export — GET /api/expenses/export + Export CSV button
 
 ---
 
