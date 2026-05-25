@@ -259,7 +259,7 @@ _Docs:_
 
 _Commit `51a7382`._
 
-_Mobile responsive audit — 8 issues found and fixed:_
+_Mobile responsive audit — 8 issues found and fixed. Phone testing at `http://192.168.1.105:3000` verified all pages work correctly._
 
 - **Nav** (`components/nav.tsx`): Two-row layout on mobile — brand+sign-out on row 1, nav links as full-width tab strip on row 2 (with `border-t`). Desktop unchanged (brand + inline separator + links + sign-out, single row). All links `min-h-[44px]`.
 - **Dashboard table** (`app/dashboard/page.tsx`): Wrapped 4-column category breakdown `<Table>` in `overflow-x-auto` div — horizontal scroll on narrow screens instead of overflow/clipping.
@@ -268,6 +268,16 @@ _Mobile responsive audit — 8 issues found and fixed:_
 - **Expense forms** (`app/expenses/new/expense-form.tsx`, `app/expenses/[id]/edit/edit-expense-form.tsx`): Cancel button gets `flex-1` to match Submit width on mobile.
 
 _No issues found on:_ /login, /signup, /expenses mobile cards, /receipts/[id]/review, delete dialogs.
+
+_Phone login fix (commits `2dea104`, `056937f`):_
+- **Better-Auth trusted origins** (`lib/auth/index.ts`): Added `BETTER_AUTH_TRUSTED_ORIGINS` env var support so LAN IP requests pass CSRF check. (Note: Better-Auth also reads this env var natively — the config entry is redundant but harmless.)
+- **Next.js `allowedDevOrigins`** (`next.config.ts`): Root cause of phone login failure — Next.js 16 blocks cross-origin access to dev JS bundles from LAN IPs by default, causing the phone to receive HTML with no JS, making the form fall back to native submit. Fixed by adding `allowedDevOrigins: ['192.168.1.105']`.
+- **`.env.local`**: `BETTER_AUTH_TRUSTED_ORIGINS=http://192.168.1.105:3000` added (gitignored).
+
+_Phone test results (verified 2026-05-25):_
+- [x] Login works from phone at `http://192.168.1.105:3000` ✓
+- [x] Receipt upload via phone ✓ (OCR pipeline runs end-to-end)
+- [x] Mobile layout fixes verified — nav tab strip, filter bar, forms all usable at 375px ✓
 
 ---
 
@@ -350,7 +360,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v0.4-uploads-done`
-- Last commit: `51a7382` — [Phase 6] fix: mobile responsive audit — nav, dashboard, settings, forms
+- Last commit: `056937f` — [Phase 6] fix: allow LAN IP in Next.js allowedDevOrigins for phone testing
 
 ---
 
