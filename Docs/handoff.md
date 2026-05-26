@@ -2,7 +2,7 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-05-25
+**Last updated:** 2026-05-26
 **Last session by:** Claude
 **Current phase:** Phase 6 COMPLETE — v1.0 live and stable.
 
@@ -254,6 +254,17 @@ _docker-compose.yml changes:_
 
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
+
+#### Post-v1.0 — PDPA compliance (2026-05-26)
+
+_Commit `05ccdb7`. No schema changes, no new dependencies._
+
+- `app/privacy/page.tsx` — new public static page (`○` prerendered); full PDPA 2010 privacy policy: data collected, no third-party sharing, Hostinger storage, delete-account = full removal, user rights, contact email
+- `app/(auth)/signup/page.tsx` — consent checkbox added; "Create account" button disabled until checked; checkbox links to `/privacy` (opens in new tab)
+- `app/(auth)/layout.tsx` — footer added to login + signup pages: "Your data is private and never shared. Privacy Policy"
+- `CLAUDE.md` — Session Protocol updated: read handoff + architecture + integration-map first; only read source files if those three don't provide enough context
+
+---
 
 #### Phase 6 Session E — COMPLETE (2026-05-25)
 

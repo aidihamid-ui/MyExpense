@@ -92,7 +92,13 @@ Full rules: `docs/subagent-rules.md`.
 
 **START:**
 
-1. Read this file + `docs/handoff.md`
+1. Read these three docs in order — they are the primary context source:
+   - `docs/handoff.md` — current state, what's done, what's next
+   - `docs/architecture.md` — ADRs, structural decisions, conventions
+   - `docs/integration-map.md` — how every integration point works
+
+   **If these three provide enough context to start coding, do so immediately — do NOT read source files first.** Only open a source file if you need to see its exact current content before editing it (e.g. to make a targeted edit or verify a line). Avoid exploratory reads of files you won't change.
+
 2. Before writing any code: scan the session prompt against the 10 critical rules in CLAUDE.md and every ADR in `docs/architecture.md`. If the prompt conflicts with any of them, list the conflict and wait for user response. Do not proceed until cleared. Known resolved discrepancies (Next.js version, PM2 vs Docker) do not need flagging.
 3. `git status` && `git log --oneline -10` — verify clean state
 4. Confirm with user what we're working on before writing code
