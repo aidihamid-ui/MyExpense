@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function AuthLayout({
   children,
 }: {
@@ -10,6 +12,12 @@ export default function AuthLayout({
         <p className="mt-1 text-sm text-muted-foreground">Track your spending, simply.</p>
       </div>
       <div className="w-full max-w-sm">{children}</div>
+      <p className="mt-8 text-xs text-muted-foreground text-center">
+        Your data is private and never shared.{' '}
+        <Link href="/privacy" className="hover:underline">
+          Privacy Policy
+        </Link>
+      </p>
     </main>
   );
 }
