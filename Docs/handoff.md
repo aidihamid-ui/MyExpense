@@ -255,6 +255,17 @@ _docker-compose.yml changes:_
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
 
+#### Post-v1.0 — 10-user cap (2026-05-26)
+
+_Commit `4afa9cf`. No schema changes, no new dependencies._
+
+- `lib/db/queries.ts` — `getUserCount()` system query added (counts all rows in `user` table, no userId filter)
+- `lib/auth/index.ts` — `MAX_USERS = 10` constant + `databaseHooks.user.create.before` hook: throws if `getUserCount() >= MAX_USERS`, blocking signup server-side
+- Error message shown in signup form: "Registration is closed. This app has reached its maximum number of users."
+- To change the limit: update `MAX_USERS` in `lib/auth/index.ts`
+
+---
+
 #### Post-v1.0 — PDPA compliance (2026-05-26)
 
 _Commit `05ccdb7`. No schema changes, no new dependencies._

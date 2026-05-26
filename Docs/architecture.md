@@ -1170,6 +1170,29 @@ Manual deletion in `deleteUserData(userId)` within a single Drizzle transaction:
 
 ### ADR-035: Sentry DSN is optional in env schema — app boots without it
 
+---
+
+### ADR-036: User cap enforced via `databaseHooks.user.create.before`
+**Date:** 2026-05-26
+**Status:** Accepted
+**Phase:** Post-v1.0
+
+**Context:**
+App is designed for personal/family use with a hard upper limit on tenants. Need to prevent unlimited signups without requiring an invite system.
+
+**Options considered:**
+1. Client-side check before calling `authClient.signUp.email()` — bypassable, not secure
+2. Custom API route wrapping signup — adds complexity, duplicates Better-Auth logic
+3. `databaseHooks.user.create.before` — runs server-side inside Better-Auth before the DB insert; throwing blocks creation and surfaces the error to the client
+
+**Decision:**
+Option 3. One `before` hook in `lib/auth/index.ts` with a `MAX_USERS = 10` constant. `getUserCount()` in `lib/db/queries.ts` counts all rows in the `user` table. If `count >= MAX_USERS`, throws — Better-Auth returns the error to the client as `authError.message`.
+
+**Consequences:**
+- Cannot be bypassed from the browser
+- To raise or lower the limit: change `MAX_USERS` in `lib/auth/index.ts` and redeploy
+- `getUserCount()` is a system query with no `userId` filter — documented as such in `queries.ts`
+
 **Date:** 2026-05-25
 **Status:** Accepted
 **Phase:** Phase 6

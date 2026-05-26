@@ -117,9 +117,11 @@ userId: text('userId').notNull()
 
 ---
 
-## 8. Signup side effects
+## 8. Signup side effects and user cap
 
-**Rule:** All post-signup logic (seeding default data, sending welcome emails, etc.) goes in `databaseHooks.user.create.after` inside `lib/auth/index.ts`. Never intercept the signup route or add a wrapper action. Wrap in try/catch so failures never block account creation (ADR-011).
+**User cap:** `databaseHooks.user.create.before` in `lib/auth/index.ts` calls `getUserCount()` and throws if `>= MAX_USERS (10)`. This is server-side — cannot be bypassed from the client. To change the limit, update `MAX_USERS` in `lib/auth/index.ts` (ADR-036).
+
+**Post-signup side effects:** All logic goes in `databaseHooks.user.create.after`. Never intercept the signup route or add a wrapper action. Wrap in try/catch so failures never block account creation (ADR-011).
 
 **File:** `lib/auth/index.ts`
 
@@ -129,6 +131,10 @@ userId: text('userId').notNull()
 databaseHooks: {
   user: {
     create: {
+      before: async () => {
+        const n = await getUserCount();
+        if (n >= MAX_USERS) throw new Error('Registration is closed...');
+      },
       after: async (user) => {
         try { await seedDefaultCategories(user.id); }
         catch (e) { console.error('Seed failed:', e); }
