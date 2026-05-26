@@ -4,6 +4,9 @@ import { db } from '@/lib/db';
 import * as schema from '@/lib/db/schema';
 import { env } from '@/lib/env';
 import { seedDefaultCategories } from '@/lib/db/seed-categories';
+import { getUserCount } from '@/lib/db/queries';
+
+const MAX_USERS = 10;
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -23,6 +26,12 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        before: async () => {
+          const currentCount = await getUserCount();
+          if (currentCount >= MAX_USERS) {
+            throw new Error('Registration is closed. This app has reached its maximum number of users.');
+          }
+        },
         after: async (user) => {
           try {
             await seedDefaultCategories(user.id);

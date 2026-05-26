@@ -8,6 +8,13 @@ import { db } from '@/lib/db';
 import { categories, expenses, ocrJobs, receipts, user } from '@/lib/db/schema';
 import { and, count, desc, eq, gte, ilike, lt, lte, sql, sum } from 'drizzle-orm';
 
+// ── System queries (no userId filter — internal use only) ───────────────────
+
+export async function getUserCount(): Promise<number> {
+  const [row] = await db.select({ count: count() }).from(user);
+  return row?.count ?? 0;
+}
+
 // ── Categories ──────────────────────────────────────────────────────────────
 
 export async function getCategories(userId: string) {
