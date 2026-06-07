@@ -255,6 +255,19 @@ _docker-compose.yml changes:_
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
 
+#### Post-v1.0 — HTTP security headers (2026-06-07)
+
+_Commit `fe21f07`. No schema changes, no new dependencies._
+
+- `next.config.ts` — `securityHeaders` array + `headers()` config added; `poweredByHeader: false`
+- Headers applied globally: HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Permissions-Policy, COEP, COOP
+- Auth pages (`/sign-in`, `/sign-up`) additionally get `Cache-Control: no-store`
+- Remediates all 9 actionable findings from OWASP ZAP baseline scan (2026-06-07)
+- Two ZAP WARN findings confirmed false positives: [10202] CSRF (Better-Auth uses SameSite cookies), [10031] XSS (React auto-escaping)
+- **Note:** ZAP only scanned 28 unauthenticated URLs — protected routes (/dashboard, /expenses, /receipts, /api/*) were NOT tested. Run authenticated ZAP scan to complete coverage.
+
+---
+
 #### Post-v1.0 — 10-user cap (2026-05-26)
 
 _Commit `4afa9cf`. No schema changes, no new dependencies._
