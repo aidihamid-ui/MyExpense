@@ -3,6 +3,7 @@ services:
   ocr-service:
     build:
       context: ./ocr-service
+    image: myexpense-ocr
     restart: unless-stopped
     environment:
       STORAGE_PATH: ${STORAGE_PATH}
@@ -16,6 +17,7 @@ services:
     build:
       context: .
       target: runner
+    image: myexpense-app
     restart: unless-stopped
     environment:
       DATABASE_URL:       ${DATABASE_URL}
@@ -64,6 +66,7 @@ services:
     build:
       context: .
       target: migrator
+    image: myexpense-migrate
     environment:
       DATABASE_URL: ${DATABASE_URL}
     depends_on:
@@ -76,6 +79,7 @@ services:
     build:
       context: .
       target: worker
+    image: myexpense-worker
     restart: unless-stopped
     environment:
       DATABASE_URL:       ${DATABASE_URL}
