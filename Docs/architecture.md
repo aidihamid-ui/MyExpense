@@ -1215,3 +1215,43 @@ Sentry is observability infrastructure, not application logic. A missing DSN mea
 - `SENTRY_AUTH_TOKEN` is kept exclusively in `.env.sentry-build-plugin` (gitignored) — never in source or committed env files. This is enforced by `.gitignore`, not by the Zod schema.
 
 **Revisit trigger:** Never — this is appropriate for the project's scale and audience.
+
+---
+
+### ADR-037: HTTP security headers via next.config.ts global headers() rule
+**Date:** 2026-06-07
+**Status:** Accepted
+**Phase:** Post-v1.0
+
+**Context:**
+OWASP ZAP baseline scan (2026-06-07) found 9 actionable WARN findings, all missing HTTP response headers: HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Permissions-Policy, COEP, COOP, Cache-Control on auth pages, X-Powered-By leak. No injection or authentication vulnerabilities found.
+
+**Options considered:**
+1. **Next.js middleware** — set headers in `proxy.ts` for every request. Works but middleware is already used for session redirect; mixing concerns in one file risks accidental header drops on new routes.
+2. **Per-route `response.headers.set()`** — set headers individually in each route handler and page. Fragile: any new route silently omits headers.
+3. **`headers()` in `next.config.ts`** — declarative, applied globally by Next.js before the response leaves the server. A single `source: "/(.*)"` rule covers all current and future routes with no per-route boilerplate. Auth-page cache rule is a supplemental entry in the same array.
+
+**Decision:**
+Option 3. Added `securityHeaders` array and `headers()` async function to `next.config.ts`. Added `poweredByHeader: false` to suppress `X-Powered-By`.
+
+**Headers applied globally:**
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()`
+- `Cross-Origin-Opener-Policy: same-origin`
+- `Cross-Origin-Embedder-Policy: require-corp`
+- `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.ingest.sentry.io; frame-ancestors 'none'`
+
+**Auth pages additionally:**
+- `Cache-Control: no-store` on `/sign-in` and `/sign-up`
+
+**CSP trade-offs:**
+`unsafe-inline` and `unsafe-eval` are required by Next.js App Router for hydration chunks. Tightening to a nonce-based CSP would require changes to the Next.js build pipeline and is out of scope for a 10-user self-hosted app. `frame-ancestors 'none'` duplicates `X-Frame-Options: DENY` for browsers that prefer CSP.
+
+**Consequences:**
+- All future routes automatically inherit these headers with no developer action
+- `COEP: require-corp` may break third-party iframes or cross-origin resources if added later — revisit if that happens
+- CSP `connect-src` must be updated if new external API calls are added (e.g., a payment provider)
+
+**Revisit trigger:** Adding a third-party embed, payment provider, or CDN for static assets.
