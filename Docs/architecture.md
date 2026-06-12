@@ -1294,3 +1294,40 @@ The "Last 30 Days" card was initially added in Phase 3 alongside "This Month" an
 
 **Revisit trigger:**
 If more than 10 distinct categories are in active use, extend the color palette or switch to a dynamically generated palette.
+
+---
+
+### ADR-039: UI localised to Manglish / Bahasa rojak — app renamed to KasiKira
+**Date:** 2026-06-12
+**Status:** Accepted
+**Phase:** Post-v1.0
+
+**Context:**
+The app serves a Malaysian audience (family/friends, 6 users max). The original English UI felt too formal and "business serious." The request was to convert terminology to a relaxed, local-dialect tone that could include humour.
+
+**Options considered:**
+
+1. **Full formal BM translation** — "Amaun", "Kaedah Pembayaran", "Log Masuk". Grammatically correct but reads like a government form. Wrong tone.
+2. **English only** — current state. Functional but impersonal.
+3. **Manglish / Bahasa rojak** — hybrid Malaysian colloquial. "Emel", "Kata Laluan" for trust-sensitive fields; "Bulan Ni", "Jom catat belanja pertama", "Mana Duit Pi?" for everything else. Relaxed, conversational, appropriate for a personal finance app among friends.
+
+**Decision:**
+Option 3. Every user-facing string in all 14 UI files was localised. The app name changed from `MyExpense` to `KasiKira` ("just count it"). Technical labels (CSV, OCR) and server-side Zod error messages remain in English.
+
+**Key naming conventions:**
+- Auth: "Masuk" / "Daftar akaun" — clean, familiar
+- Nav: "Ringkasan", "Belanja", "Tetapan", "Log keluar"
+- Dashboard: "Bulan Ni", "Bulan lepas", "Jumlah Ditapis", "Mana Duit Pi?"
+- Forms: "Jumlah (RM)", "Kategori", "Tarikh", "Cara Bayaran", "Nota (kalau nak)…"
+- Payment: "Tunai", "Kad", "E-Wallet", "Lain-lain"
+- Delete: "Padam belanja ni?", "Sekali padam, tak boleh patah balik."
+- Settings danger zone: "Zon Bahaya" — deliberate edge
+- Brand: "KasiKira" replaces "MyExpense" in the Nav
+
+**Trade-offs we accept:**
+- Non-Malaysian users will find some strings unfamiliar — acceptable for a 6-user self-hosted family app
+- The "PADAM" confirmation keyword in the delete-account flow replaces "DELETE" — UX is the same, just localised
+- Some strings ("E-Wallet") stay English because there is no established BM equivalent more recognisable than the English term
+
+**Revisit trigger:**
+If non-Malaysian users join, or if the app is ever open-sourced to a wider audience, consider i18n with locale files instead of hardcoded strings.

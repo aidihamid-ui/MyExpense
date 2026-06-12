@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-06-12
 **Last session by:** Claude
-**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed).
+**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira.
 
 ---
 
