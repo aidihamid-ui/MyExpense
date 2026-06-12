@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-06-12
 **Last session by:** Claude
-**Current phase:** Phase 6 COMPLETE — v1.0 live and stable.
+**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart via recharts, Last 30 Days removed, label crowding fix).
 
 ---
 
@@ -72,7 +72,7 @@ _Dashboard page (`app/dashboard/page.tsx`):_
 - Zod `safeParse` validation — invalid params fall back to MYT current-month defaults silently (ADR-019)
 - Row 1: 2 metric cards — This Month, Filtered Total (all formatted `RM X,XXX.XX`). Last 30 Days card removed in dashboard v2.
 - Row 2: FilterBar client component
-- Row 3: Category pie chart (donut via recharts + shadcn chart)
+- Row 3: Category pie chart (donut via recharts + shadcn chart). Labels hide category name on small slices (&lt;7%) to prevent crowding.
 - Row 4: Category breakdown table — Category | Amount | Transactions | % of Total; empty state message
 - `formatRM()` helper — `en-MY` locale, 2 decimal places
 
