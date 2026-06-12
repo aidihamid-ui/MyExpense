@@ -3,19 +3,26 @@ import { categories } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 const DEFAULT_CATEGORIES = [
-  'Food',
+  'Makan',
+  'Barang Dapur',
   'Transport',
-  'Groceries',
-  'Utilities',
-  'Entertainment',
-  'Healthcare',
-  'Travel',
-  'Home Care',
-  'Other',
+  'Bil Rumah',
+  'Rumah',
+  'Hiburan',
+  'Kesihatan',
+  'Jalan-Jalan',
+  'Pinjaman',
+  'Insurans & Takaful',
+  'Shopping',
+  'Gajet & Elektronik',
+  'Kecantikan',
+  'Pelajaran',
+  'Hadiah & Sumbangan',
+  'Lain-Lain',
 ] as const;
 
 /**
- * Seeds the 7 default categories for a user.
+ * Seeds the 16 default categories for a user.
  * Safe to call multiple times — only inserts missing categories.
  */
 export async function seedDefaultCategories(userId: string): Promise<void> {
