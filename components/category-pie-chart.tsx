@@ -69,36 +69,51 @@ export default function CategoryPieChart({
             No expenses in this period
           </p>
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className="mx-auto aspect-square max-h-80"
-          >
-            <PieChart>
-              <Pie
-                data={chartData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius="80%"
-                innerRadius="45%"
-                paddingAngle={2}
-                label={({ name }) => name}
-                labelLine
-              >
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    formatter={(value) => formatRM(Number(value))}
+          <>
+            <ChartContainer
+              config={chartConfig}
+              className="mx-auto aspect-square max-h-72"
+            >
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius="80%"
+                  innerRadius="45%"
+                  paddingAngle={2}
+                >
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value) => formatRM(Number(value))}
+                    />
+                  }
+                />
+              </PieChart>
+            </ChartContainer>
+
+            {/* Color-key legend */}
+            <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-3">
+              {chartData.map((d) => (
+                <div key={d.name} className="flex items-center gap-2 text-sm">
+                  <span
+                    className="inline-block h-3 w-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: d.fill }}
                   />
-                }
-              />
-            </PieChart>
-          </ChartContainer>
+                  <span className="truncate text-muted-foreground">
+                    {d.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
