@@ -39,13 +39,13 @@ export default function DeleteExpenseButton({ expenseId }: { expenseId: string }
       </DialogTrigger>
       <DialogContent showCloseButton={false} className="rounded-xl">
         <DialogHeader>
-          <DialogTitle>Delete this expense?</DialogTitle>
-          <DialogDescription>This cannot be undone.</DialogDescription>
+          <DialogTitle>Padam belanja ni?</DialogTitle>
+          <DialogDescription>Sekali padam, tak boleh patah balik.</DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
             <Button variant="outline" disabled={isPending} className="h-11">
-              Cancel
+              Batal
             </Button>
           </DialogClose>
           <Button
@@ -54,7 +54,7 @@ export default function DeleteExpenseButton({ expenseId }: { expenseId: string }
             disabled={isPending}
             className="h-11"
           >
-            {isPending ? 'Deleting...' : 'Delete'}
+            {isPending ? 'Tengah padam…' : 'Padam'}
           </Button>
         </DialogFooter>
       </DialogContent>

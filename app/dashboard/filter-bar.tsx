@@ -57,7 +57,7 @@ export default function FilterBar({
     <Card className="shadow-sm">
       <CardContent className="flex flex-col gap-3 pt-4 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted-foreground">From</label>
+          <label className="text-xs font-medium text-muted-foreground">Dari</label>
           <Input
             type="date"
             value={from}
@@ -66,7 +66,7 @@ export default function FilterBar({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted-foreground">To</label>
+          <label className="text-xs font-medium text-muted-foreground">Hingga</label>
           <Input
             type="date"
             value={to}
@@ -75,14 +75,14 @@ export default function FilterBar({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted-foreground">Category</label>
+          <label className="text-xs font-medium text-muted-foreground">Kategori</label>
           {/* Controlled Select (no name prop) — URL-param navigation, not FormData */}
           <Select value={categoryId} onValueChange={setCategoryId}>
             <SelectTrigger className="h-11 w-full sm:w-44">
-              <SelectValue placeholder="All categories" />
+              <SelectValue placeholder="Semua" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
+              <SelectItem value="all">Semua</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>
                   {cat.name}
@@ -93,7 +93,7 @@ export default function FilterBar({
         </div>
         <div className="flex gap-3 sm:contents">
           <Button onClick={apply} className="h-11 flex-1 sm:flex-none">
-            Apply
+            Papar
           </Button>
           <Button onClick={reset} variant="outline" className="h-11 flex-1 sm:flex-none">
             Reset

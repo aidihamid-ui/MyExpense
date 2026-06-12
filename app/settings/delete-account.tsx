@@ -44,30 +44,29 @@ export default function DeleteAccountSection() {
   return (
     <>
       <p className="mb-4 text-sm text-muted-foreground">
-        Permanently deletes your account, all expenses, receipts, and categories. This cannot be
-        undone.
+        Padam akaun kau kekal, termasuk semua belanja, resit, dan kategori. Tak boleh patah balik.
       </p>
       <Button variant="destructive" onClick={handleOpen}>
-        Delete account
+        Padam akaun
       </Button>
 
       <Dialog open={open} onOpenChange={(v) => { if (!isPending) setOpen(v); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete account</DialogTitle>
+            <DialogTitle>Padam akaun</DialogTitle>
             <DialogDescription>
-              All your data will be permanently deleted. This action cannot be reversed.
+              Semua data kau akan dipadam kekal. Tak boleh undo.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2">
             <p className="text-sm text-muted-foreground">
-              Type <strong className="text-foreground">DELETE</strong> to confirm.
+              Taip <strong className="text-foreground">PADAM</strong> untuk sahkan.
             </p>
             <Input
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
-              placeholder="DELETE"
+              placeholder="PADAM"
               disabled={isPending}
             />
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -79,14 +78,14 @@ export default function DeleteAccountSection() {
               onClick={() => setOpen(false)}
               disabled={isPending}
             >
-              Cancel
+              Batal
             </Button>
             <Button
               variant="destructive"
               onClick={handleConfirm}
-              disabled={typed !== 'DELETE' || isPending}
+              disabled={typed !== 'PADAM' || isPending}
             >
-              {isPending ? 'Deleting…' : 'Delete my account'}
+              {isPending ? 'Tengah padam…' : 'Padam akaun saya'}
             </Button>
           </DialogFooter>
         </DialogContent>

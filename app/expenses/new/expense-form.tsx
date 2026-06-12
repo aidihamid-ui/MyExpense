@@ -19,10 +19,10 @@ import {
 type Category = { id: string; name: string };
 
 const PAYMENT_METHODS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
+  { value: 'cash', label: 'Tunai' },
+  { value: 'card', label: 'Kad' },
   { value: 'ewallet', label: 'E-Wallet' },
-  { value: 'other', label: 'Other' },
+  { value: 'other', label: 'Lain-lain' },
 ] as const;
 
 const today = new Date().toISOString().split('T')[0];
@@ -116,9 +116,9 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         {/* Amount */}
         <div>
           <label htmlFor="amount" className="mb-1.5 block text-sm font-medium">
-            Amount (RM){' '}
+            Jumlah (RM){' '}
             {fileSelected ? (
-              <span className="text-muted-foreground text-xs font-normal">(from receipt)</span>
+              <span className="text-muted-foreground text-xs font-normal">(dari resit)</span>
             ) : (
               <span className="text-destructive">*</span>
             )}
@@ -141,14 +141,14 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         {/* Category */}
         <div>
           <label htmlFor="categoryId" className="mb-1.5 block text-sm font-medium">
-            Category
+            Kategori
           </label>
           <Select name="categoryId" defaultValue="none">
             <SelectTrigger id="categoryId" className="h-11 w-full">
-              <SelectValue placeholder="— None —" />
+              <SelectValue placeholder="— Tiada —" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">— None —</SelectItem>
+              <SelectItem value="none">— Tiada —</SelectItem>
               {categories.map((cat) => (
                 <SelectItem key={cat.id} value={cat.id}>
                   {cat.name}
@@ -164,7 +164,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         {/* Date */}
         <div>
           <label htmlFor="date" className="mb-1.5 block text-sm font-medium">
-            Date <span className="text-destructive">*</span>
+            Tarikh <span className="text-destructive">*</span>
           </label>
           <Input
             id="date"
@@ -182,7 +182,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         {/* Payment Method */}
         <div>
           <label htmlFor="paymentMethod" className="mb-1.5 block text-sm font-medium">
-            Payment Method <span className="text-destructive">*</span>
+            Cara Bayaran <span className="text-destructive">*</span>
           </label>
           <Select name="paymentMethod" defaultValue="cash" required>
             <SelectTrigger id="paymentMethod" className="h-11 w-full">
@@ -204,14 +204,14 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         {/* Note */}
         <div>
           <label htmlFor="note" className="mb-1.5 block text-sm font-medium">
-            Note
+            Nota
           </label>
           <Textarea
             id="note"
             name="note"
             rows={3}
             maxLength={500}
-            placeholder="Optional note..."
+            placeholder="Nota (kalau nak)…"
             className="resize-none"
           />
           {state?.errors?.note && (
@@ -222,7 +222,7 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         {/* Receipt upload */}
         <div>
           <label htmlFor="receiptFile" className="mb-1.5 block text-sm font-medium">
-            Receipt <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+            Resit <span className="text-muted-foreground text-xs font-normal">(tak wajib)</span>
           </label>
           <Input
             id="receiptFile"
@@ -233,10 +233,10 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
             onChange={(e) => setFileSelected(!!e.target.files?.[0])}
           />
           {uploadStatus === 'uploading' && (
-            <p className="mt-1 text-xs text-muted-foreground">Uploading receipt…</p>
+            <p className="mt-1 text-xs text-muted-foreground">Tengah upload resit…</p>
           )}
           {uploadStatus === 'enqueuing_ocr' && (
-            <p className="mt-1 text-xs text-muted-foreground">Starting OCR…</p>
+            <p className="mt-1 text-xs text-muted-foreground">Tengah scan resit…</p>
           )}
           {uploadStatus === 'error' && (
             <p className="mt-1 text-xs text-destructive">{uploadError}</p>
@@ -246,15 +246,15 @@ export default function ExpenseForm({ categories }: { categories: Category[] }) 
         <div className="flex gap-3 pt-1">
           <Button type="submit" disabled={submitting} className="h-11 flex-1">
             {uploadStatus === 'uploading'
-              ? 'Uploading receipt…'
+              ? 'Tengah upload resit…'
               : uploadStatus === 'enqueuing_ocr'
-                ? 'Starting OCR…'
+                ? 'Tengah scan resit…'
                 : isPending
-                  ? 'Saving…'
-                  : 'Save expense'}
+                  ? 'Tengah simpan…'
+                  : 'Simpan'}
           </Button>
           <Button variant="outline" asChild className="h-11 flex-1">
-            <Link href="/expenses">Cancel</Link>
+            <Link href="/expenses">Batal</Link>
           </Button>
         </div>
       </form>

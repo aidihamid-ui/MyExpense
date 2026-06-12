@@ -20,10 +20,10 @@ import {
 } from '@/components/ui/table';
 
 const PAYMENT_LABELS: Record<string, string> = {
-  cash: 'Cash',
-  card: 'Card',
+  cash: 'Tunai',
+  card: 'Kad',
   ewallet: 'E-Wallet',
-  other: 'Other',
+  other: 'Lain-lain',
 };
 
 const PAGE_SIZE = 20;
@@ -62,13 +62,13 @@ export default async function ExpensesPage({
       <Nav />
       <main className="mx-auto max-w-5xl px-4 py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Expenses</h1>
+          <h1 className="text-2xl font-semibold">Belanja</h1>
           <div className="flex gap-2">
             <Button asChild variant="outline" className="h-11 px-5">
-              <a href="/api/expenses/export">Export CSV</a>
+              <a href="/api/expenses/export">Eksport CSV</a>
             </Button>
             <Button asChild className="h-11 px-5">
-              <Link href="/expenses/new">Add expense</Link>
+              <Link href="/expenses/new">Tambah belanja</Link>
             </Button>
           </div>
         </div>
@@ -81,11 +81,11 @@ export default async function ExpensesPage({
           <Card className="shadow-sm">
             <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
               <p className="text-muted-foreground">
-                {q ? 'No expenses match your search.' : 'No expenses yet.'}
+                {q ? 'Hmm, takde yang sama' : 'Belum ada belanja lagi'}
               </p>
               {!q && (
                 <Button asChild variant="outline" className="h-11">
-                  <Link href="/expenses/new">Add your first expense</Link>
+                  <Link href="/expenses/new">Jom catat belanja pertama</Link>
                 </Button>
               )}
             </CardContent>
@@ -97,12 +97,12 @@ export default async function ExpensesPage({
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="px-4">Date</TableHead>
-                    <TableHead className="px-4">Category</TableHead>
-                    <TableHead className="px-4 text-right">Amount (RM)</TableHead>
-                    <TableHead className="px-4">Payment</TableHead>
-                    <TableHead className="px-4">Note</TableHead>
-                    <TableHead className="px-4">Actions</TableHead>
+                    <TableHead className="px-4">Tarikh</TableHead>
+                    <TableHead className="px-4">Kategori</TableHead>
+                    <TableHead className="px-4 text-right">Jumlah (RM)</TableHead>
+                    <TableHead className="px-4">Bayaran</TableHead>
+                    <TableHead className="px-4">Nota</TableHead>
+                    <TableHead className="px-4">Tindakan</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -141,7 +141,7 @@ export default async function ExpensesPage({
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
-                                Receipt
+                                Resit
                               </Link>
                             </Button>
                           )}
@@ -187,7 +187,7 @@ export default async function ExpensesPage({
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            Receipt
+                            Resit
                           </Link>
                         </Button>
                       )}

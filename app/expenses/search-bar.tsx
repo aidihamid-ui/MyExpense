@@ -23,7 +23,7 @@ export default function SearchBar({ defaultValue }: { defaultValue: string }) {
   return (
     <Input
       type="search"
-      placeholder="Search by note…"
+      placeholder="Cari nota…"
       value={value}
       onChange={handleChange}
       className="h-11 max-w-sm"

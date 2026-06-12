@@ -42,13 +42,13 @@ export default function SignupPage() {
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl">Create account</CardTitle>
+        <CardTitle className="text-xl">Daftar akaun</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="name" className="text-sm font-medium">
-              Name
+              Nama
             </label>
             <Input
               id="name"
@@ -56,14 +56,14 @@ export default function SignupPage() {
               type="text"
               required
               autoComplete="name"
-              placeholder="Your name"
+              placeholder="Nama kau"
               className="h-11"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              Emel
             </label>
             <Input
               id="email"
@@ -78,7 +78,7 @@ export default function SignupPage() {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="password" className="text-sm font-medium">
-              Password
+              Kata Laluan
             </label>
             <Input
               id="password"
@@ -99,11 +99,11 @@ export default function SignupPage() {
               className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-primary"
             />
             <span className="text-sm text-muted-foreground leading-snug">
-              I agree to the{' '}
+              Saya setuju dengan{' '}
               <Link href="/privacy" target="_blank" className="text-primary hover:underline font-medium">
-                Privacy Policy
+                terma & privasi
               </Link>
-              . My data is stored securely and will not be shared with third parties.
+              . Data kau disimpan selamat dan takkan dikongsi.
             </span>
           </label>
 
@@ -118,14 +118,14 @@ export default function SignupPage() {
             disabled={pending || !agreed}
             className="h-11 w-full"
           >
-            {pending ? 'Creating account…' : 'Create account'}
+            {pending ? 'Tengah daftar…' : 'Daftar akaun'}
           </Button>
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          Dah ada akaun?{' '}
           <Link href="/login" className="text-primary hover:underline font-medium">
-            Sign in
+            Masuk
           </Link>
         </p>
       </CardContent>

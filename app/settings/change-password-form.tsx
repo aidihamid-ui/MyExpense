@@ -20,13 +20,13 @@ export default function ChangePasswordForm() {
       )}
       {state?.ok === true && (
         <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">
-          Password changed successfully.
+          Password dah tukar.
         </p>
       )}
 
       <div className="space-y-1">
         <label htmlFor="currentPassword" className="text-sm font-medium">
-          Current password
+          Password semasa
         </label>
         <Input
           id="currentPassword"
@@ -43,7 +43,7 @@ export default function ChangePasswordForm() {
 
       <div className="space-y-1">
         <label htmlFor="newPassword" className="text-sm font-medium">
-          New password
+          Password baru
         </label>
         <Input
           id="newPassword"
@@ -60,7 +60,7 @@ export default function ChangePasswordForm() {
 
       <div className="space-y-1">
         <label htmlFor="confirmNewPassword" className="text-sm font-medium">
-          Confirm new password
+          Sahkan password baru
         </label>
         <Input
           id="confirmNewPassword"
@@ -76,7 +76,7 @@ export default function ChangePasswordForm() {
       </div>
 
       <Button type="submit" disabled={isPending} className="h-11 w-full">
-        {isPending ? 'Saving…' : 'Change password'}
+        {isPending ? 'Tengah simpan…' : 'Tukar password'}
       </Button>
     </form>
   );

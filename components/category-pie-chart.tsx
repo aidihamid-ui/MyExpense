@@ -44,7 +44,7 @@ interface CategoryPieChartProps {
 export default function CategoryPieChart({
   breakdown,
   totalAmount,
-  title = 'Spending by Category',
+  title = 'Mana Duit Pi?',
 }: CategoryPieChartProps) {
   if (breakdown.length === 0) return null;
 
@@ -66,7 +66,7 @@ export default function CategoryPieChart({
       <CardContent>
         {totalAmount === 0 ? (
           <p className="py-12 text-center text-sm text-muted-foreground">
-            No expenses in this period
+            Belum belanja apa-apa bulan ni
           </p>
         ) : (
           <>

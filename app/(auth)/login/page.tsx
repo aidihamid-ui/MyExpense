@@ -39,13 +39,13 @@ export default function LoginPage() {
   return (
     <Card className="shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-xl">Sign in</CardTitle>
+        <CardTitle className="text-xl">Masuk</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              Emel
             </label>
             <Input
               id="email"
@@ -60,7 +60,7 @@ export default function LoginPage() {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="password" className="text-sm font-medium">
-              Password
+              Kata Laluan
             </label>
             <Input
               id="password"
@@ -83,14 +83,14 @@ export default function LoginPage() {
             disabled={pending}
             className="h-11 w-full"
           >
-            {pending ? 'Signing in…' : 'Sign in'}
+            {pending ? 'Tengah masuk…' : 'Masuk'}
           </Button>
         </form>
 
         <p className="mt-4 text-center text-sm text-muted-foreground">
-          No account?{' '}
+          Takde akaun lagi?{' '}
           <Link href="/signup" className="text-primary hover:underline font-medium">
-            Create one
+            Daftar kejap
           </Link>
         </p>
       </CardContent>

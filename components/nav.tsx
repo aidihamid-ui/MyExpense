@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { authClient } from '@/lib/auth/client';
 
 const links = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/expenses', label: 'Expenses' },
-  { href: '/settings', label: 'Settings' },
+  { href: '/dashboard', label: 'Ringkasan' },
+  { href: '/expenses', label: 'Belanja' },
+  { href: '/settings', label: 'Tetapan' },
 ];
 
 export default function Nav() {
@@ -26,7 +26,7 @@ export default function Nav() {
       <div className="mx-auto max-w-5xl px-4">
         {/* Top row: brand (+ desktop links inline) + sign out */}
         <div className="flex items-center py-2">
-          <span className="text-base font-bold text-primary tracking-tight">MyExpense</span>
+          <span className="text-base font-bold text-primary tracking-tight">KasiKira</span>
           {/* Desktop only: separator + nav links inline */}
           <div className="hidden sm:flex items-center gap-3 ml-3">
             <Separator orientation="vertical" className="h-5" />
@@ -48,7 +48,7 @@ export default function Nav() {
           </div>
           <div className="ml-auto">
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              Sign out
+              Log keluar
             </Button>
           </div>
         </div>

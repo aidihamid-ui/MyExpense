@@ -105,28 +105,28 @@ export default async function DashboardPage({
     <div className="min-h-screen bg-slate-50">
       <Nav />
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <h1 className="mb-6 text-2xl font-semibold">Dashboard</h1>
+        <h1 className="mb-6 text-2xl font-semibold">Ringkasan</h1>
 
         {/* Row 1 — Metric cards */}
         <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>This Month</CardTitle>
-              <CardDescription>Current calendar month (MYT)</CardDescription>
+              <CardTitle>Bulan Ni</CardTitle>
+              <CardDescription>Bulan semasa</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-primary">
                 {formatRM(summary.currentMonthTotal)}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Last month: {formatRM(summary.lastMonthTotal)}
+                Bulan lepas: {formatRM(summary.lastMonthTotal)}
               </p>
             </CardContent>
           </Card>
 
           <Card className="shadow-sm">
             <CardHeader>
-              <CardTitle>Filtered Total</CardTitle>
+              <CardTitle>Jumlah Ditapis</CardTitle>
               <CardDescription>
                 {fromStr} → {toStr}
               </CardDescription>
@@ -134,7 +134,7 @@ export default async function DashboardPage({
             <CardContent>
               <p className="text-3xl font-bold text-primary">{formatRM(filtered.total)}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {filtered.count} transaction{filtered.count !== 1 ? 's' : ''}
+                {filtered.count} transaksi
               </p>
             </CardContent>
           </Card>
@@ -163,7 +163,7 @@ export default async function DashboardPage({
         {/* Row 4 — Category breakdown table */}
         <Card className="shadow-sm">
           <CardHeader>
-            <CardTitle>Category Breakdown</CardTitle>
+            <CardTitle>Pecahan Kategori</CardTitle>
             <CardDescription>
               {fromStr} → {toStr}
             </CardDescription>
@@ -171,17 +171,17 @@ export default async function DashboardPage({
           <CardContent>
             {displayBreakdown.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No expenses in this period
+                Belum belanja apa-apa bulan ni
               </p>
             ) : (
               <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="text-right">Transactions</TableHead>
-                    <TableHead className="text-right">% of Total</TableHead>
+                    <TableHead>Kategori</TableHead>
+                    <TableHead className="text-right">Jumlah</TableHead>
+                    <TableHead className="text-right">Transaksi</TableHead>
+                    <TableHead className="text-right">%</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
