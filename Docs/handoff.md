@@ -2,7 +2,7 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-05-26
+**Last updated:** 2026-06-12
 **Last session by:** Claude
 **Current phase:** Phase 6 COMPLETE — v1.0 live and stable.
 
@@ -61,7 +61,7 @@ _Dependencies added:_
 **Phase 3 — COMPLETE:**
 
 _Query layer (`lib/db/queries.ts`):_
-- `getDashboardSummary(userId, now)` — currentMonthTotal, lastMonthTotal, last30DaysTotal; all boundaries computed in MYT (UTC+8) from `now: Date` (ADR-020)
+- `getDashboardSummary(userId, now)` — currentMonthTotal, lastMonthTotal; all boundaries computed in MYT (UTC+8) from `now: Date` (ADR-020). last30DaysTotal removed in dashboard v2.
 - `getCategoryBreakdown(userId, from, to)` — array of {categoryId, categoryName, total, count} ordered by total desc; uncategorized grouped as 'uncategorized'
 - `getFilteredExpenseSummary(userId, from, to, categoryId?)` — {total, count} for the active filter
 - `getUserCategories` — alias for existing `getCategories`
@@ -70,9 +70,10 @@ _Query layer (`lib/db/queries.ts`):_
 _Dashboard page (`app/dashboard/page.tsx`):_
 - Server Component; reads `searchParams` (Promise in Next.js 16) for `from`, `to`, `categoryId`
 - Zod `safeParse` validation — invalid params fall back to MYT current-month defaults silently (ADR-019)
-- Row 1: 3 metric cards — This Month, Last 30 Days, Filtered Total (all formatted `RM X,XXX.XX`)
+- Row 1: 2 metric cards — This Month, Filtered Total (all formatted `RM X,XXX.XX`). Last 30 Days card removed in dashboard v2.
 - Row 2: FilterBar client component
-- Row 3: Category breakdown table — Category | Amount | Transactions | % of Total; empty state message
+- Row 3: Category pie chart (donut via recharts + shadcn chart)
+- Row 4: Category breakdown table — Category | Amount | Transactions | % of Total; empty state message
 - `formatRM()` helper — `en-MY` locale, 2 decimal places
 
 _Filter bar (`app/dashboard/filter-bar.tsx`):_

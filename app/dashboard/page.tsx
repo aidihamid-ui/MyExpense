@@ -19,6 +19,7 @@ import {
   getCategories,
 } from '@/lib/db/queries';
 import FilterBar from './filter-bar';
+import CategoryPieChart from '@/components/category-pie-chart';
 
 // Malaysia UTC+8 offset in milliseconds
 const MYT_OFFSET_MS = 8 * 60 * 60 * 1000;
@@ -107,7 +108,7 @@ export default async function DashboardPage({
         <h1 className="mb-6 text-2xl font-semibold">Dashboard</h1>
 
         {/* Row 1 — Metric cards */}
-        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <div className="mb-6 grid gap-4 sm:grid-cols-2">
           <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>This Month</CardTitle>
@@ -119,18 +120,6 @@ export default async function DashboardPage({
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Last month: {formatRM(summary.lastMonthTotal)}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-sm">
-            <CardHeader>
-              <CardTitle>Last 30 Days</CardTitle>
-              <CardDescription>Rolling 30-day window (MYT)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-primary">
-                {formatRM(summary.last30DaysTotal)}
               </p>
             </CardContent>
           </Card>
@@ -163,7 +152,15 @@ export default async function DashboardPage({
           />
         </div>
 
-        {/* Row 3 — Category breakdown table */}
+        {/* Row 3 — Pie chart */}
+        <div className="mb-6">
+          <CategoryPieChart
+            breakdown={breakdown}
+            totalAmount={filtered.total}
+          />
+        </div>
+
+        {/* Row 4 — Category breakdown table */}
         <Card className="shadow-sm">
           <CardHeader>
             <CardTitle>Category Breakdown</CardTitle>

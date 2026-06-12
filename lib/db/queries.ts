@@ -150,7 +150,7 @@ export async function deleteExpense(userId: string, expenseId: string) {
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
 /**
- * Returns current-month total, last-month total, and rolling 30-day total.
+ * Returns current-month total and last-month total.
  * All calendar boundaries are computed in Malaysia local time (UTC+8).
  * `now` must be passed by the caller — never derive current time inside a query.
  */
@@ -173,12 +173,7 @@ export async function getDashboardSummary(userId: string, now: Date) {
   const lastMonthNum = month === 0 ? 11 : month - 1;
   const lastMonthStart = `${lastMonthYear}-${pad(lastMonthNum + 1)}-01`;
 
-  // Last 30 days: [30 days ago in MYT, today in MYT]
-  const thirtyDaysAgoMYT = new Date(nowMYT.getTime() - 30 * 24 * 60 * 60 * 1000);
-  const last30DaysStart = `${thirtyDaysAgoMYT.getUTCFullYear()}-${pad(thirtyDaysAgoMYT.getUTCMonth() + 1)}-${pad(thirtyDaysAgoMYT.getUTCDate())}`;
-  const todayStr = `${year}-${pad(month + 1)}-${pad(nowMYT.getUTCDate())}`;
-
-  const [currentMonth, lastMonth, last30Days] = await Promise.all([
+  const [currentMonth, lastMonth] = await Promise.all([
     db
       .select({ total: sum(expenses.amount) })
       .from(expenses)
@@ -199,22 +194,11 @@ export async function getDashboardSummary(userId: string, now: Date) {
           lt(expenses.date, currentMonthStart)
         )
       ),
-    db
-      .select({ total: sum(expenses.amount) })
-      .from(expenses)
-      .where(
-        and(
-          eq(expenses.userId, userId),
-          gte(expenses.date, last30DaysStart),
-          lte(expenses.date, todayStr)
-        )
-      ),
   ]);
 
   return {
     currentMonthTotal: Number(currentMonth[0]?.total ?? 0),
     lastMonthTotal: Number(lastMonth[0]?.total ?? 0),
-    last30DaysTotal: Number(last30Days[0]?.total ?? 0),
   };
 }
 

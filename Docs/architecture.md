@@ -1255,3 +1255,42 @@ Option 3. Added `securityHeaders` array and `headers()` async function to `next.
 - CSP `connect-src` must be updated if new external API calls are added (e.g., a payment provider)
 
 **Revisit trigger:** Adding a third-party embed, payment provider, or CDN for static assets.
+
+---
+
+### ADR-038: Dashboard v2 — recharts pie chart + removal of Last 30 Days rolling window
+**Date:** 2026-06-12
+**Status:** Accepted
+**Phase:** Post-v1.0 (Dashboard v2)
+
+**Context:**
+Two dashboard improvements requested: (1) add a pie chart visualisation for category spending, and (2) remove the "Last 30 Days" rolling-window metric card. Phase 3's original plan noted "chart in V2" for the category breakdown.
+
+**Options considered (charting library):**
+
+1. **recharts** — Most popular React charting library. shadcn/ui provides a `chart` component built on recharts. Declarative API, good TS types.
+2. **chart.js + react-chartjs-2** — Canvas-based, larger bundle, imperative config, no shadcn integration.
+3. **visx (Airbnb)** — Low-level D3 primitives for React. Very flexible but requires significantly more code for a simple pie chart.
+4. **Nivo** — React + D3. Good pie chart, but another dependency without shadcn integration.
+
+**Decision:**
+recharts v3 via `npm install recharts`, integrated through shadcn's `ChartContainer` / `ChartTooltip` / `ChartTooltipContent` components (`npx shadcn@latest add chart`).
+
+**Pie chart placement:**
+Option A (side-by-side with table), Option B (replaces table), or Option C (above the table). Chose **Option C** — full-width donut chart above the existing category breakdown table. The table provides exact numbers; the chart provides visual proportion. Stacked layout works well on mobile.
+
+**Removal of Last 30 Days rolling window:**
+The "Last 30 Days" card was initially added in Phase 3 alongside "This Month" and "Filtered Total". Feedback was that a rolling 30-day window overlapping with the current-month total is redundant. The `getDashboardSummary` query was simplified from three DB queries to two (current month + last month), removing the last30Days computation. The dashboard metric card grid changed from `sm:grid-cols-3` to `sm:grid-cols-2`.
+
+**Reasoning:**
+- recharts is the path of least resistance because shadcn's `chart` component is built for it
+- The donut chart + table combination preserves both at-a-glance visual and exact drill-down data
+- Removing the last30Days query reduces DB load (one fewer aggregation per dashboard load)
+
+**Trade-offs we accept:**
+- recharts adds ~120KB gzipped to the client bundle (acceptable for 6-user self-hosted app)
+- 10-color hardcoded palette in `CategoryPieChart` — categories beyond 10 wrap around and reuse colors
+- The pie chart is a Client Component (`'use client'`) while the rest of the dashboard is a Server Component — inevitable for any interactive chart library
+
+**Revisit trigger:**
+If more than 10 distinct categories are in active use, extend the color palette or switch to a dynamically generated palette.
