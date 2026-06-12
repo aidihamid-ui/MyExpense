@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — MyExpense',
+  title: 'Privacy Policy — KasiKira',
 };
 
 export default function PrivacyPage() {
@@ -11,7 +11,7 @@ export default function PrivacyPage() {
       <div className="mx-auto max-w-2xl">
         <div className="mb-8">
           <Link href="/login" className="text-sm text-slate-500 hover:underline">
-            &larr; Back to MyExpense
+            &larr; Back to KasiKira
           </Link>
         </div>
 
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-base font-semibold text-slate-900 mb-2">Who we are</h2>
             <p>
-              MyExpense is a personal expense tracking app operated by an individual for personal
+              KasiKira is a personal expense tracking app operated by an individual for personal
               and family use. The app is hosted on a private server (Hostinger VPS, Malaysia region).
             </p>
           </section>

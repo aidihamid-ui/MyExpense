@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MyExpense",
+  title: "KasiKira",
   description: "Personal expense tracker",
 };
 
