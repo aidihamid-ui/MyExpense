@@ -83,12 +83,7 @@ export default function CategoryPieChart({
                 outerRadius="80%"
                 innerRadius="45%"
                 paddingAngle={2}
-                label={({ name, percent }) => {
-                  const pct = (percent ?? 0) * 100;
-                  // Small slices: show only percentage to avoid label crowding
-                  if (pct < 7) return `${pct.toFixed(0)}%`;
-                  return `${name} ${pct.toFixed(0)}%`;
-                }}
+                label={({ name }) => name}
                 labelLine
               >
                 {chartData.map((entry, index) => (
