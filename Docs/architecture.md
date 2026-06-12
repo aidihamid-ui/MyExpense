@@ -1277,7 +1277,7 @@ Two dashboard improvements requested: (1) add a pie chart visualisation for cate
 recharts v3 via `npm install recharts`, integrated through shadcn's `ChartContainer` / `ChartTooltip` / `ChartTooltipContent` components (`npx shadcn@latest add chart`).
 
 **Pie chart placement:**
-Option A (side-by-side with table), Option B (replaces table), or Option C (above the table). Chose **Option C** — full-width donut chart above the existing category breakdown table. The table provides exact numbers; the chart provides visual proportion. Stacked layout works well on mobile.
+Option A (side-by-side with table), Option B (replaces table), or Option C (above the table). Chose **Option C** — full-width donut chart above the existing category breakdown table. The table provides exact numbers; the chart provides visual proportion. Stacked layout works well on mobile. Pie slices have no inline labels — a color-key legend below the chart maps each color to its category, avoiding label crowding on thin slices.
 
 **Removal of Last 30 Days rolling window:**
 The "Last 30 Days" card was initially added in Phase 3 alongside "This Month" and "Filtered Total". Feedback was that a rolling 30-day window overlapping with the current-month total is redundant. The `getDashboardSummary` query was simplified from three DB queries to two (current month + last month), removing the last30Days computation. The dashboard metric card grid changed from `sm:grid-cols-3` to `sm:grid-cols-2`.
