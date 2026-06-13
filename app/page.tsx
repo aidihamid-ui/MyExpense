@@ -7,7 +7,7 @@ export default function Home() {
         <h1 className="mb-2 text-2xl font-semibold text-gray-900">
           KasiKira
         </h1>
-        <p className="mb-8 text-sm text-gray-500">Track your expenses.</p>
+        <p className="mb-8 text-sm text-gray-500">Jom kira, baru tahu.</p>
         <div className="flex flex-col gap-3">
           <Link
             href="/login"

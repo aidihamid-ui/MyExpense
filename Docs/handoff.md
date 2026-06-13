@@ -2,7 +2,7 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-06-12
+**Last updated:** 2026-06-13
 **Last session by:** Claude
 **Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira.
 
@@ -291,6 +291,17 @@ _Commit `05ccdb7`. No schema changes, no new dependencies._
 
 ---
 
+#### Post-v1.0 — KasiKira brand rename and tagline (2026-06-12)
+
+_Commits `190f604` (brand rename), pending (tagline). No schema changes, no new dependencies._
+
+- `app/layout.tsx` — metadata `title`: "MyExpense" → "KasiKira"
+- `app/page.tsx` — landing page `<h1>` + tagline: "MyExpense" → "KasiKira", "Track your expenses." → "Jom kira, baru tahu."
+- `app/(auth)/layout.tsx` — auth pages brand header + tagline: "MyExpense" → "KasiKira", "Track your spending, simply." → "Jom kira, baru tahu."
+- `app/privacy/page.tsx` — metadata title, back link, and body text: "MyExpense" → "KasiKira" (3 occurrences)
+
+---
+
 #### Phase 6 Session E — COMPLETE (2026-05-25)
 
 _Commits `f93a49c`, `523fb22`, `3bd8c7b`, `4a82778`._
@@ -419,7 +430,7 @@ Two accounts (`aidi.hamid@yahoo.com.my`, `user-a@test.com`) were created during 
 **Travel and Home Care added to default categories (`96199ca`):**
 Added to `lib/db/seed-categories.ts` (future signups get 9 categories). Seeded directly to all 3 existing VPS accounts via SQL. Deployed via `make deploy`.
 
-- Last commit: `96199ca` — [Phase 6] feat: add Travel and Home Care to default categories
+- Last commit: `190f604` — fix: rename remaining MyExpense references to KasiKira (tagline commit pending)
 
 ### Phase 5a VPS verification — COMPLETE (2026-05-20)
 
@@ -454,7 +465,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v1.0-production`
-- Last commit: `96199ca` — [Phase 6] feat: add Travel and Home Care to default categories
+- Last commit: `190f604` — fix: rename remaining MyExpense references to KasiKira (tagline commit pending)
 
 ---
 
