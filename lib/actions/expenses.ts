@@ -64,6 +64,7 @@ export async function createExpenseAction(
     return { message: 'Something went wrong. Please try again.' };
   }
 
+  revalidatePath('/expenses');
   redirect('/expenses');
 }
 
@@ -108,6 +109,7 @@ export async function updateExpenseAction(
     return { message: 'Something went wrong. Please try again.' };
   }
 
+  revalidatePath('/expenses');
   redirect('/expenses');
 }
 
