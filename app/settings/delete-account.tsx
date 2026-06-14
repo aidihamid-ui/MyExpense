@@ -44,7 +44,7 @@ export default function DeleteAccountSection() {
   return (
     <>
       <p className="mb-4 text-sm text-muted-foreground">
-        Padam akaun kau kekal, termasuk semua belanja, resit, dan kategori. Tak boleh patah balik.
+        Padam akaun anda kekal, termasuk semua belanja, resit, dan kategori. Tak boleh patah balik.
       </p>
       <Button variant="destructive" onClick={handleOpen}>
         Padam akaun
@@ -55,7 +55,7 @@ export default function DeleteAccountSection() {
           <DialogHeader>
             <DialogTitle>Padam akaun</DialogTitle>
             <DialogDescription>
-              Semua data kau akan dipadam kekal. Tak boleh undo.
+              Semua data anda akan dipadam kekal. Tak boleh undo.
             </DialogDescription>
           </DialogHeader>
 

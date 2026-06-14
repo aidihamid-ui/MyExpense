@@ -56,7 +56,7 @@ export default function SignupPage() {
               type="text"
               required
               autoComplete="name"
-              placeholder="Nama kau"
+              placeholder="Nama anda"
               className="h-11"
             />
           </div>
@@ -103,7 +103,7 @@ export default function SignupPage() {
               <Link href="/privacy" target="_blank" className="text-primary hover:underline font-medium">
                 terma & privasi
               </Link>
-              . Data kau disimpan selamat dan takkan dikongsi.
+              . Data anda disimpan selamat dan takkan dikongsi.
             </span>
           </label>
 
