@@ -2,9 +2,9 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-06-13
+**Last updated:** 2026-06-14
 **Last session by:** Claude
-**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira.
+**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira. Terms of Use page added.
 
 ---
 
@@ -288,6 +288,17 @@ _Commit `05ccdb7`. No schema changes, no new dependencies._
 - `app/(auth)/signup/page.tsx` — consent checkbox added; "Create account" button disabled until checked; checkbox links to `/privacy` (opens in new tab)
 - `app/(auth)/layout.tsx` — footer added to login + signup pages: "Your data is private and never shared. Privacy Policy"
 - `CLAUDE.md` — Session Protocol updated: read handoff + architecture + integration-map first; only read source files if those three don't provide enough context
+
+---
+
+#### Post-v1.0 — Terms of Use (2026-06-14)
+
+_Commit `9223e4e`. No schema changes, no new dependencies._
+
+- `app/terms/page.tsx` — new public static page (`○` prerendered); Terms of Use: best-endeavour basis, free-for-now with prior notice if pricing introduced, 14-day shutdown notice, CSV data export via email, Malaysian law jurisdiction, contact `aidi.hamid@yahoo.com.my`
+- `app/page.tsx` — footer added with "Privacy Policy · Terms of Use" links
+- `app/(auth)/layout.tsx` — "Terms of Use" link added alongside existing "Privacy Policy" in footer
+- Deployed to VPS — build and all containers healthy
 
 ---
 
