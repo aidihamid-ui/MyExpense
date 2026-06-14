@@ -4,7 +4,7 @@
 
 **Last updated:** 2026-06-14
 **Last session by:** Claude
-**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira. Terms of Use page added.
+**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira. Terms of Use page added. "kau" → "anda" across all UI.
 
 ---
 
@@ -255,6 +255,16 @@ _docker-compose.yml changes:_
 
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
+
+#### Post-v1.0 — Language: "kau" → "anda" (2026-06-14)
+
+_Commit `1732c59`. No schema changes, no new dependencies._
+
+- `app/(auth)/signup/page.tsx` — name placeholder + consent text
+- `app/settings/delete-account.tsx` — delete warning + confirmation dialog
+- "akaun" (account) untouched — different word, not a pronoun
+
+---
 
 #### Post-v1.0 — HTTP security headers (2026-06-07)
 
