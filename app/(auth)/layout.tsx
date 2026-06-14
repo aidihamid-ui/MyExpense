@@ -17,6 +17,10 @@ export default function AuthLayout({
         <Link href="/privacy" className="hover:underline">
           Privacy Policy
         </Link>
+        {' · '}
+        <Link href="/terms" className="hover:underline">
+          Terms of Use
+        </Link>
       </p>
     </main>
   );

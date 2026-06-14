@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-sm rounded-xl border border-gray-200 bg-white p-8 shadow-sm text-center">
         <h1 className="mb-2 text-2xl font-semibold text-gray-900">
           KasiKira
@@ -23,6 +23,11 @@ export default function Home() {
           </Link>
         </div>
       </div>
+      <p className="mt-8 text-xs text-gray-400 text-center">
+        <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+        {' · '}
+        <Link href="/terms" className="hover:underline">Terms of Use</Link>
+      </p>
     </main>
   );
 }
