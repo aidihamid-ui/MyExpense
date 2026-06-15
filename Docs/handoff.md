@@ -2,9 +2,9 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-06-14
+**Last updated:** 2026-06-15
 **Last session by:** Claude
-**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira. Terms of Use page added. "kau" → "anda" across all UI.
+**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira. Terms of Use page added. "kau" → "anda" across all UI. 300 MB per-user receipt storage quota added.
 
 ---
 
@@ -255,6 +255,17 @@ _docker-compose.yml changes:_
 
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
+
+#### Post-v1.0 — Per-user receipt storage quota (2026-06-15)
+
+_No schema changes, no new dependencies._
+
+- `lib/db/queries.ts` — `getUserStorageUsed(userId)`: sums `sizeBytes` across all receipts for a user
+- `lib/actions/receipts.ts` — quota check (step 3 in upload pipeline): rejects with `QUOTA_EXCEEDED` if `used + new file > 300 MB`; error message in Manglish shows current usage
+- `QUOTA_BYTES = 300 * 1024 * 1024` constant alongside existing `MAX_BYTES`
+- ADR-040 added to `Docs/architecture.md`
+
+---
 
 #### Post-v1.0 — Language: "kau" → "anda" (2026-06-14)
 

@@ -2,7 +2,7 @@
 
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
-import { createReceipt, createOcrJob, getReceiptById, getReceiptStatus } from '@/lib/db/queries';
+import { createReceipt, createOcrJob, getReceiptById, getReceiptStatus, getUserStorageUsed } from '@/lib/db/queries';
 import { env } from '@/lib/env';
 import { z } from 'zod';
 import path from 'path';
@@ -52,6 +52,7 @@ const EXT: Record<AllowedMime, string> = {
 };
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+const QUOTA_BYTES = 300 * 1024 * 1024; // 300 MB per user
 
 export type UploadReceiptResult =
   | { ok: true; data: { receiptId: string } }
@@ -73,7 +74,20 @@ export async function uploadReceiptAction(
     return { ok: false, error: { code: 'NO_FILE', message: 'No file provided.' } };
   }
 
-  // 3. Size check (5 MB max)
+  // 3. Quota check (300 MB per user)
+  const storageUsed = await getUserStorageUsed(userId);
+  if (storageUsed + file.size > QUOTA_BYTES) {
+    const usedMB = (storageUsed / (1024 * 1024)).toFixed(1);
+    return {
+      ok: false,
+      error: {
+        code: 'QUOTA_EXCEEDED',
+        message: `Storan penuh. Anda dah guna ${usedMB} MB daripada 300 MB yang dibenarkan.`,
+      },
+    };
+  }
+
+  // 4. Size check (5 MB max)
   if (file.size > MAX_BYTES) {
     return {
       ok: false,
@@ -81,7 +95,7 @@ export async function uploadReceiptAction(
     };
   }
 
-  // 4. MIME whitelist
+  // 5. MIME whitelist
   const mimeType = file.type as AllowedMime;
   if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
     return {

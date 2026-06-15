@@ -299,6 +299,14 @@ export async function deleteUserData(userId: string): Promise<string[]> {
 
 // ── Receipts ─────────────────────────────────────────────────────────────────
 
+export async function getUserStorageUsed(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ total: sum(receipts.sizeBytes) })
+    .from(receipts)
+    .where(eq(receipts.userId, userId));
+  return Number(row?.total ?? 0);
+}
+
 export async function createReceipt(
   userId: string,
   data: {

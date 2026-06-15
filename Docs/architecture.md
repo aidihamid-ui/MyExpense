@@ -1331,3 +1331,34 @@ Option 3. Every user-facing string in all 14 UI files was localised. The app nam
 
 **Revisit trigger:**
 If non-Malaysian users join, or if the app is ever open-sourced to a wider audience, consider i18n with locale files instead of hardcoded strings.
+
+---
+
+### ADR-040: Per-user receipt storage quota of 300 MB
+**Date:** 2026-06-15
+**Status:** Accepted
+**Phase:** Post-v1.0
+
+**Context:**
+No guardrail existed on how much storage a single user could consume by uploading receipts. With 10 users on an 80 GB VPS, one heavy user could theoretically fill the disk with no warning.
+
+**Options considered:**
+1. **No quota** — simple, but leaves disk unprotected against runaway uploads.
+2. **100 MB** — too tight for a few years of normal use (~100 receipts at average 1 MB).
+3. **300 MB** — covers ~300–1,500 receipts (years of normal use). 10 users × 300 MB = 3 GB max, trivial on an 80 GB VPS.
+4. **1 GB** — generous but unnecessary given the family/friends scope.
+
+**Decision:**
+300 MB per user (`QUOTA_BYTES` constant in `lib/actions/receipts.ts`). Enforced in `uploadReceiptAction` before any file processing: `getUserStorageUsed(userId)` sums `sizeBytes` from the `receipts` table; if `used + new file size > 300 MB`, returns `QUOTA_EXCEEDED` with the current usage shown to the user in Manglish.
+
+**Implementation:**
+- `lib/db/queries.ts` — `getUserStorageUsed(userId)`: sums `receipts.sizeBytes` filtered by `userId`
+- `lib/actions/receipts.ts` — quota check runs as step 3, before MIME/magic-byte checks (fail fast, no unnecessary reads)
+- Error message: *"Storan penuh. Anda dah guna X MB daripada 300 MB yang dibenarkan."*
+
+**Trade-offs we accept:**
+- Quota is based on original `file.size`, not the EXIF-stripped output. Difference is negligible (a few KB) and keeping the check before sharp processing is faster and simpler.
+- No UI progress indicator showing remaining quota — not needed for a family app at this scale.
+
+**Revisit trigger:**
+If users legitimately hit 300 MB, raise `QUOTA_BYTES` or add a per-user override. If the app grows beyond 10 users, consider moving receipts to object storage (Cloudflare R2) and setting quota there.
