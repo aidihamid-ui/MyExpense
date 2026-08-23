@@ -18,11 +18,17 @@ const DEFAULT_CATEGORIES = [
   'Kecantikan',
   'Pelajaran',
   'Hadiah & Sumbangan',
+  'Minyak & Tol',
+  'Bil Telefon & Internet',
+  'Langganan & Streaming',
+  'Grooming & Dobi',
+  'Zakat & Derma',
+  'Keluarga & Anak',
   'Lain-Lain',
 ] as const;
 
 /**
- * Seeds the 16 default categories for a user.
+ * Seeds the 22 default categories for a user.
  * Safe to call multiple times — only inserts missing categories.
  */
 export async function seedDefaultCategories(userId: string): Promise<void> {

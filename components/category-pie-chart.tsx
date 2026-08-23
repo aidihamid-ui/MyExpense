@@ -16,6 +16,7 @@ interface BreakdownItem {
 }
 
 const COLORS = [
+  // First 10 unchanged — existing dashboards keep their look
   'hsl(217, 91%, 60%)',
   'hsl(142, 71%, 45%)',
   'hsl(25, 95%, 53%)',
@@ -26,6 +27,19 @@ const COLORS = [
   'hsl(0, 72%, 51%)',
   'hsl(200, 98%, 39%)',
   'hsl(330, 81%, 60%)',
+  // Extended palette — one distinct slot per default category (22 total)
+  'hsl(75, 65%, 45%)',
+  'hsl(100, 55%, 42%)',
+  'hsl(128, 45%, 50%)',
+  'hsl(163, 70%, 40%)',
+  'hsl(178, 55%, 55%)',
+  'hsl(28, 70%, 42%)',
+  'hsl(238, 78%, 64%)',
+  'hsl(285, 60%, 58%)',
+  'hsl(305, 55%, 55%)',
+  'hsl(20, 90%, 68%)',
+  'hsl(58, 85%, 62%)',
+  'hsl(210, 30%, 60%)',
 ];
 
 function formatRM(amount: number): string {
