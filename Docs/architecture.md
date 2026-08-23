@@ -1362,3 +1362,31 @@ No guardrail existed on how much storage a single user could consume by uploadin
 
 **Revisit trigger:**
 If users legitimately hit 300 MB, raise `QUOTA_BYTES` or add a per-user override. If the app grows beyond 10 users, consider moving receipts to object storage (Cloudflare R2) and setting quota there.
+
+---
+
+### ADR-041: Additive category taxonomy + reviewed per-account data migrations
+**Date:** 2026-08-23
+**Status:** Accepted
+**Phase:** Post-v1.0
+
+**Context:**
+Too much spend landed in the catch-all bucket — August 2026 alone had RM 19,385 across 22 rows in "Other" for the main account. The 16 BM defaults didn't match how money is actually spent (no fuel/toll, personal telco bills, subscriptions, family support, etc.). Separately, discovery: migration `0004_funny_manglish` (June-12 BM rename) was committed but never applied on the VPS — 3 accounts still had English categories while 2 newer accounts got BM-16 at signup.
+
+**Options considered (taxonomy):**
+1. Restructure/merge existing categories — breaks month-over-month comparability; rejected.
+2. Additive gap-fillers, names stable once created — chosen.
+
+**Decision:**
+- **Taxonomy is additive.** Category names are never renamed or repurposed after creation, except one-time localization alignment. Six gap-fillers added: Minyak & Tol, Bil Telefon & Internet, Langganan & Streaming, Grooming & Dobi, Zakat & Derma, Keluarga & Anak. Defaults are now **22** (`lib/db/seed-categories.ts`), Lain-Lain stays last.
+- **Chart palette length ≥ default category count.** `components/category-pie-chart.tsx` COLORS extended 10 → 22 (first 10 unchanged); wrap-around color reuse is a defect signal, not a style.
+- **Per-account data migrations follow this recipe:** fresh `make backup` → single psql transaction scoped by explicit userId → renames/inserts use migration-0004 patterns → row remaps target explicit expense IDs reviewed by the owner beforehand → in-transaction asserts (remap-complete count, row count, SUM invariant, category count) abort the whole transaction on any mismatch via ON_ERROR_STOP.
+- **Pending-migration policy:** `0004` remains unapplied on the VPS by choice — the main account was aligned to BM-22 via account-scoped SQL instead, leaving other accounts untouched until Aidi decides to unify.
+
+**Trade-offs we accept:**
+- Accounts show mixed languages (`aidi@yahoo.com`, `user-a@test.com` still English-9) until 0004 eventually runs via `make migrate`.
+- Palette is a hand-maintained array; adding defaults again means extending it manually.
+- The RM 7,636 lump was split 5,000 Pinjaman / 2,636 Insurans & Takaful as an estimate — owner will re-split precisely later via UI edits.
+
+**Revisit trigger:**
+When all accounts should share the BM taxonomy, run `make migrate` on the VPS (applies 0004 to remaining English accounts). If categories grow past 22, extend COLORS in the same commit as DEFAULT_CATEGORIES.

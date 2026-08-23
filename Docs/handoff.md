@@ -2,9 +2,9 @@
 
 **Read this at the start of every Claude Code session.** It's the single source of truth for where the project stands right now.
 
-**Last updated:** 2026-06-15
+**Last updated:** 2026-08-23
 **Last session by:** Claude
-**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira. Terms of Use page added. "kau" → "anda" across all UI. 300 MB per-user receipt storage quota added.
+**Current phase:** Phase 6 COMPLETE — v1.0 live. Dashboard v2 (pie chart with color legend, Last 30 Days removed). Full UI localized to Manglish/Bahasa rojak — brand renamed to KasiKira. Terms of Use page added. "kau" → "anda" across all UI. 300 MB per-user receipt storage quota added. Expense categories expanded to 22 with August remap for main account (ADR-041).
 
 ---
 
@@ -256,6 +256,25 @@ _docker-compose.yml changes:_
 _Docs:_
 - `Docs/architecture.md` — ADR-025 appended (OCR binds 0.0.0.0 inside container, no ports published)
 
+#### Post-v1.0 — Expense categories 16→22 + August remap (2026-08-23)
+
+_Commit `ee7e7a2` (code, pushed + deployed). Data migration done via reviewed SQL transaction on VPS. ADR-041._
+
+**Discovery:** migration `0004_funny_manglish` (June BM rename) was never applied on the VPS — main account (plus `aidi@yahoo.com`, `user-a@test.com`) still had English-9 categories while the two newer accounts had BM-16 from signup seeding.
+
+**Code:**
+- `lib/db/seed-categories.ts` — DEFAULT_CATEGORIES 16 → 22 (added Minyak & Tol, Bil Telefon & Internet, Langganan & Streaming, Grooming & Dobi, Zakat & Derma, Keluarga & Anak; Lain-Lain stays last). Future signups get 22.
+- `components/category-pie-chart.tsx` — COLORS extended 10 → 22 so slices stay distinct (first 10 unchanged).
+- Typecheck/lint/test(20)/build clean. Deployed via `make deploy`, live URL 200.
+
+**Data (main account only, `aidi.hamid@yahoo.com.my`):**
+- Backup taken first (`db-2026-08-23_06-15-55.sql.gz`). Daily 02:00 backups confirmed running.
+- Single self-verifying transaction: 8 renames English→BM (scoped to userId), +13 categories (7 standard + 6 new), 22 August rows remapped out of Other/Lain-Lain by explicit ID, RM7,636 lump split into RM5,000 Pinjaman (existing row) + RM2,636 Insurans & Takaful (new row). Asserts on Lain-Lain=0 / row count 94 / SUM invariant passed before commit.
+- Verified after: August total unchanged RM 23,232.31; account has exactly 22 BM categories; other users untouched.
+- **Pending:** `make migrate` still not run on VPS — when Aidi wants all accounts unified to BM-16(+), run it (`aidi@yahoo.com` and `user-a@test.com` will rename then).
+
+---
+
 #### Post-v1.0 — Per-user receipt storage quota (2026-06-15)
 
 _No schema changes, no new dependencies._
@@ -448,8 +467,8 @@ _Multi-tenancy:_ `userId` filter is unconditional in the outer `and()`; search f
 
 ## What's broken or incomplete
 
-- Backup cron not yet set up on VPS (see `Docs/deployment.md` — Automated daily backup section)
-- `user-a@test.com` has no expenses — test account only, safe to ignore or delete
+- ~~Backup cron not yet set up on VPS~~ — **resolved**: daily 02:00 backups confirmed running (verified 2026-08-23, files present in `/var/backups/myexpense/`)
+- Migration `0004_funny_manglish` still unapplied on VPS — run `make migrate` to unify remaining English accounts to BM (see ADR-041)
 
 ### Post-v1.0 fixes (2026-05-25)
 
@@ -462,7 +481,7 @@ Two accounts (`aidi.hamid@yahoo.com.my`, `user-a@test.com`) were created during 
 **Travel and Home Care added to default categories (`96199ca`):**
 Added to `lib/db/seed-categories.ts` (future signups get 9 categories). Seeded directly to all 3 existing VPS accounts via SQL. Deployed via `make deploy`.
 
-- Last commit: `190f604` — fix: rename remaining MyExpense references to KasiKira (tagline commit pending)
+- Last commit: `ee7e7a2` — [Post-v1.0] feat: add 6 expense categories + extend chart palette
 
 ### Phase 5a VPS verification — COMPLETE (2026-05-20)
 
@@ -497,7 +516,7 @@ All 5 tests passed via `docker compose exec app sh`:
 
 - Branch: master
 - Last tag: `v1.0-production`
-- Last commit: `190f604` — fix: rename remaining MyExpense references to KasiKira (tagline commit pending)
+- Last commit: `ee7e7a2` — [Post-v1.0] feat: add 6 expense categories + extend chart palette (pushed + deployed)
 
 ---
 
